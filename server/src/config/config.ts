@@ -1,0 +1,104 @@
+// Server runtime config. Validated at boot; the process refuses to start
+// on any invalid or missing value. See PLAN.md 6.3.
+// No secrets are read from the repo; they come from the environment only.
+
+export type AppEnv = "local" | "staging" | "prod";
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+export interface ServerConfig {
+  appEnv: AppEnv;
+  host: string;
+  port: number;
+  databaseUrl: string;
+  allowedOrigins: string[];
+  trustCloudflare: boolean;
+  dataDir: string;
+  logLevel: LogLevel;
+  metricsHost: string;
+  metricsPort: number;
+}
+
+function required(
+  name: string,
+  env: Record<string, string | undefined>,
+): string {
+  const value = env[name];
+  if (value === undefined || value === "") {
+    throw new Error(`missing env ${name}`);
+  }
+  return value;
+}
+
+function parsePort(value: string, name: string): number {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    throw new Error(`invalid env ${name}`);
+  }
+  return n;
+}
+
+function parseHostPort(
+  value: string,
+  name: string,
+): { host: string; port: number } {
+  const idx = value.lastIndexOf(":");
+  if (idx < 0) throw new Error(`invalid env ${name}`);
+  const host = value.slice(0, idx);
+  const port = parsePort(value.slice(idx + 1), name);
+  if (host === "") throw new Error(`invalid env ${name}`);
+  return { host, port };
+}
+
+/** Parse and validate the process environment. Throws on any problem. */
+export function loadConfig(
+  env: Record<string, string | undefined>,
+): ServerConfig {
+  const appEnvRaw = required("APP_ENV", env);
+  if (
+    appEnvRaw !== "local" && appEnvRaw !== "staging" && appEnvRaw !== "prod"
+  ) {
+    throw new Error("invalid env APP_ENV");
+  }
+  const host = required("HOST", env);
+  const port = parsePort(required("PORT", env), "PORT");
+  const databaseUrl = required("DATABASE_URL", env);
+  if (
+    !databaseUrl.startsWith("postgresql://") &&
+    !databaseUrl.startsWith("postgres://")
+  ) {
+    throw new Error("invalid env DATABASE_URL");
+  }
+  const allowedRaw = required("ALLOWED_ORIGINS", env);
+  const allowedOrigins = allowedRaw.split(",").map((s) => s.trim()).filter((
+    s,
+  ) => s !== "");
+  if (allowedOrigins.length === 0) {
+    throw new Error("invalid env ALLOWED_ORIGINS");
+  }
+  const trustRaw = required("TRUST_CLOUDFLARE", env);
+  if (trustRaw !== "true" && trustRaw !== "false") {
+    throw new Error("invalid env TRUST_CLOUDFLARE");
+  }
+  const dataDir = required("DATA_DIR", env);
+  const logRaw = required("LOG_LEVEL", env);
+  if (
+    logRaw !== "debug" && logRaw !== "info" && logRaw !== "warn" &&
+    logRaw !== "error"
+  ) {
+    throw new Error("invalid env LOG_LEVEL");
+  }
+  const metrics = parseHostPort(required("METRICS_PORT", env), "METRICS_PORT");
+
+  return {
+    appEnv: appEnvRaw,
+    host,
+    port,
+    databaseUrl,
+    allowedOrigins,
+    trustCloudflare: trustRaw === "true",
+    dataDir,
+    logLevel: logRaw,
+    metricsHost: metrics.host,
+    metricsPort: metrics.port,
+  };
+}

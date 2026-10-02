@@ -250,6 +250,15 @@ PLAN.md 0.3).
   single-threaded; credentialless keeps OSM tiles working. Remains VERIFY on
   staging and devices: no-CDN requests, wasm vs js bytes vs 3 MB budget,
   crossOriginIsolated, wake lock on recorded iOS versions.
+- 2026-10-02: T06 done. Server skeleton with Deno 2.9.7, Hono 4.13.12 MIT via
+  JSR, deno.lock committed. Config fail-fast per PLAN 6.3, Log wrapper with
+  no coordinate or token API, GET /v1/health plus generic 404 and error
+  handler, graceful shutdown, localhost-only metrics listener. Minimal flags:
+  allow-net bind plus db, allow-env listed vars, allow-read DATA_DIR; no
+  write, run, ffi, sys. Schema library (Valibot vs Zod) deferred to T08 where
+  request validation lands. CI server job added with setup-deno v2 pinned.
+  Local verify: deno fmt, lint, check clean; 5 tests pass; boot serves health
+  and metrics; invalid env refuses to start.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

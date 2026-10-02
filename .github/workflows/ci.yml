@@ -1,5 +1,5 @@
-# CI for T03. See PLAN.md 17.2.
-# Actions pinned by SHA. Server (deno) job lands in T06.
+# CI for T03 plus T06 server job. See PLAN.md 17.2.
+# Actions pinned by SHA.
 # Verified SHAs 2026-10-02 via api.github.com commits endpoints.
 name: ci
 on:
@@ -36,6 +36,35 @@ jobs:
       - name: Web size report
         working-directory: app
         run: flutter build web --release
+  server:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: local
+      HOST: 127.0.0.1
+      PORT: 8080
+      DATABASE_URL: postgresql://user:pass@127.0.0.1:5432/dbname
+      ALLOWED_ORIGINS: http://127.0.0.1:8080
+      TRUST_CLOUDFLARE: "false"
+      DATA_DIR: ./build
+      LOG_LEVEL: info
+      METRICS_PORT: 127.0.0.1:9091
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: 2.9.7
+      - name: Deno fmt check
+        working-directory: server
+        run: deno fmt --check
+      - name: Deno lint
+        working-directory: server
+        run: deno lint
+      - name: Deno check
+        working-directory: server
+        run: deno check src/main.ts
+      - name: Deno test
+        working-directory: server
+        run: deno task test
   gitleaks:
     runs-on: ubuntu-latest
     steps:

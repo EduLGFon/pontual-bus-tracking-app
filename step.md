@@ -1,37 +1,34 @@
-# step.md - Current step: T03 CI
+# step.md - Current step: T06 server skeleton
 
-Status: done 2026-10-02. Next: S1 and S2 spikes in parallel before T06. T04 and T05 need owner infra answers (INFRA-01 to INFRA-12) and cannot complete without them.
+Status: done 2026-10-02. Next: T07. T04 and T05 blocked on owner infra answers.
 
-## 1. What T03 is
+## 1. What T06 is
 
-PLAN.md section 16, Milestone M0. Deliverable: CI with analyze, format check, tests, size report, manifest audit, gitleaks (server job added in T06).
+PLAN.md section 16, Milestone M1. Deliverable: `server/` skeleton with deno.json, import map, lock, fail-fast config, Log wrapper, Hono app, GET /v1/health, graceful shutdown, internal metrics listener, CI job.
 
 ## 2. Done 2026-10-02
 
-- Created `.github/workflows/ci.yml` with actions pinned by SHA and `permissions: contents: read`.
-- Flutter job: analyze, format check, test, manifest audit, web size report.
-- Gitleaks job on full history.
-- Deno job deferred to T06 per PLAN.
-- Scripts in `tools/ci/`: `manifest_audit.sh` (forbidden permission check), `size_report.sh` (report only).
-- Verified locally: `flutter analyze` clean, `flutter test` passes, manifest audit PASS, `ci.yml` YAML parses, web build measured 40 MB uncompressed (canvaskit dominated, needs S4).
+- Deno 2.9.7 with Hono 4.13.12 MIT via JSR, deno.lock committed.
+- Fail-fast env validation per PLAN 6.3, Log wrapper with no PII API, health endpoint, generic errors, shutdown handlers, localhost metrics.
+- Minimal permission flags, no write/run/ffi/sys.
+- CI server job added with pinned setup-deno.
+- Verified: deno fmt/lint/check clean, 5 tests pass, live boot serves health and metrics, invalid env refuses.
 
-## 3. Acceptance criteria (from PLAN T03)
+## 3. Acceptance criteria (from PLAN T06)
 
-- Green on empty app.
+- Server boots with minimal permissions; invalid env refuses to start.
 
-## 4. Verify (run in this order, record output in the PR)
+## 4. Verify
 
-1. `flutter analyze` clean (in `app/`).
-2. `dart format --set-exit-if-changed lib test` clean.
-3. `flutter test` passes.
-4. `bash tools/ci/manifest_audit.sh` PASS.
-5. `ci.yml` YAML parses; actions pinned by SHA.
+1. `deno fmt --check`, `deno lint`, `deno check src/main.ts` clean (in `server/`).
+2. `deno task test` passes.
+3. Live boot serves `/v1/health` and metrics; bad env exits non-zero.
 
-## 5. Rules for this step
+## 5. Rules
 
-- One logical change only. No app logic, no server code, no new dependencies.
-- Docs language English. No em dashes. Conventional commit: `chore: add CI pipeline (T03)`.
+- One logical change only. No DB, auth, or engine code (T07 onward).
+- Docs English. No em dashes. Commit: `feat: add server skeleton (T06)`.
 
-## 6. Next step after T03 passes
+## 6. Next
 
-S1 and S2 spikes in parallel before T06 (PLAN critical path). T04 and T05 blocked on owner infra answers. M1 backend (T06 onward) can proceed locally once S2 closes.
+T07 (migration 0001 plus repositories plus app_config loader plus no_location_at_rest test). Needs local PostgreSQL via Docker; staging/prod VPS work stays blocked on owner.
