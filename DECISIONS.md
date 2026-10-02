@@ -164,13 +164,13 @@ when its spike or task runs.
 - V07 (host): `MemoryDenyWriteExecute` support on target systemd, provider
   disk-encryption and swap options, `bbox` values against real municipal routes.
 
-## 4. Spikes (S1, S2 done 2026-10-02; S3, S4 pending)
+## 4. Spikes (S1-S4 done 2026-10-02)
 
 - S1: geolocator foreground service. See V01. Done, findings in section 5.
 - S2: Deno + Caddy + Cloudflare + postgres.js + dbmate. See V02. Done,
   findings in section 5.
-- S3: flutter_map cache and perf. See V03.
-- S4: Flutter Web wasm, PWA, wake lock. See V04.
+- S3: flutter_map cache and perf. See V03. Done, findings in section 5.
+- S4: Flutter Web wasm, PWA, wake lock. See V04. Done, findings in section 5.
 
 Rule: run spikes before building on their assumptions (AGENTS.md section 3,
 PLAN.md 0.3).
@@ -231,6 +231,25 @@ PLAN.md 0.3).
   edge-cache snapshot GETs, IP ranges via api.cloudflare.com/client/v4/ips,
   AOP available on Free. Ping bytes estimated 0.6 to 1.2 KB per ping; S2 gate
   0.6 KB per ping must be measured at 15 s vs 90 s on staging.
+- 2026-10-02: S3 done (V03). flutter_map 8.3.2 BSD-3-Clause plus latlong2
+  0.10.1 Apache-2.0; cache API BuiltInMapCachingProvider with maxCacheSize
+  supports 50 MB cap, auto-enabled on non-web, no-op on web. OSM policy:
+  https tile.openstreetmap.org only, real User-Agent via
+  userAgentPackageName, visible attribution, no bulk download or prefetch,
+  cache per headers. PLAN D12 stands with TileSource abstraction and exit
+  plan before Phase 2. Remains VERIFY on device: 55 fps pan, 50 MB cap,
+  first vs repeat bytes, real UA tiles, PSS memory.
+- 2026-10-02: S4 done (V04). Flag is --wasm (dual wasm plus JS fallback);
+  default is dart2js plus CanvasKit; --web-renderer removed. Single-threaded
+  skwasm beats CanvasKit on 3.47.x; iOS browsers always get JS fallback.
+  --no-web-resources-cdn self-hosts CanvasKit but not Roboto from
+  fonts.gstatic.com (open issue). No Flutter service worker by default now;
+  use Cache-Control and ETag. Wake Lock needs visible document and HTTPS;
+  iOS standalone PWA broken before 18.4; geolocation stops when hidden per
+  spec, matching KL4 foreground-only design. --wasm needs no COOP/COEP for
+  single-threaded; credentialless keeps OSM tiles working. Remains VERIFY on
+  staging and devices: no-CDN requests, wasm vs js bytes vs 3 MB budget,
+  crossOriginIsolated, wake lock on recorded iOS versions.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
