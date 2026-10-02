@@ -7,4 +7,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T01 repo skeleton done (README, CHANGELOG, gitignore, SECURITY, templates, env examples). Restored `app/` directory.
 - T02 Flutter shell done (Flutter 3.47.6, applicationId `com.spotnik.pontual`, strict analyzer, empty ProviderScope app, smoke test).
 - T03 CI done (pinned actions, analyze plus format plus test, manifest audit, web size report, gitleaks; deno job lands in T06).
+- S1 and S2 spikes done (geolocator 14.1.1 plus FGS findings; Deno 2.9.7 plus Hono 4.13.12 plus postgres.js 3.4.9 plus dbmate and Cloudflare findings).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

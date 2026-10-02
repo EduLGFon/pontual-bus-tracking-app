@@ -164,10 +164,11 @@ when its spike or task runs.
 - V07 (host): `MemoryDenyWriteExecute` support on target systemd, provider
   disk-encryption and swap options, `bbox` values against real municipal routes.
 
-## 4. Spikes (not started)
+## 4. Spikes (S1, S2 done 2026-10-02; S3, S4 pending)
 
-- S1: geolocator foreground service. See V01.
-- S2: Deno + Caddy + Cloudflare + postgres.js + dbmate. See V02.
+- S1: geolocator foreground service. See V01. Done, findings in section 5.
+- S2: Deno + Caddy + Cloudflare + postgres.js + dbmate. See V02. Done,
+  findings in section 5.
 - S3: flutter_map cache and perf. See V03.
 - S4: Flutter Web wasm, PWA, wake lock. See V04.
 
@@ -206,6 +207,30 @@ PLAN.md 0.3).
   37 MB, main.dart.js 1.7 MB); compressed first-load and AAB gates land in
   T44/T45 after S4 wasm/CDN work. Local verify: analyze clean, test passes,
   audit PASS, YAML parses.
+- 2026-10-02: S1 done (V01). geolocator 14.1.1 (MIT, Baseflow, Flutter
+  Favorite) with geolocator_android 5.1.1+1; compatible with Flutter 3.47.6
+  (needs >= 3.29.0). Foreground service via AndroidSettings
+  foregroundNotificationConfig; bound service stops on swipe-away per D11, no
+  ACCESS_BACKGROUND_LOCATION needed. Position.isMocked available on Android.
+  No notification action button (tap opens app; RF03 fallback stands).
+  POST_NOTIFICATIONS must be declared and requested separately on API 33+;
+  geolocator does not request it. Plugin manifest contributes only the
+  location FGS service entry; app must declare FINE/COARSE,
+  FOREGROUND_SERVICE plus FOREGROUND_SERVICE_LOCATION, POST_NOTIFICATIONS.
+  Remains VERIFY on device: 30 min screen-off, swipe-away, denied
+  notifications, merged manifest, isMocked, Play FGS declaration.
+- 2026-10-02: S2 done (V02). Deno 2.9.7 stable pinned line 2.x; flags
+  --allow-net, --allow-env (scoped), --allow-read (scoped); no write, run,
+  ffi, sys. Hono 4.13.12 MIT via jsr:@hono/hono, Deno.serve plus
+  upgradeWebSocket from jsr:@hono/hono/deno wrapping Deno.upgradeWebSocket
+  (idleTimeout default 30 s). postgres.js 3.4.9 Unlicense, TLS plus pooling
+  options fit same-host PG; import specifier and TLS mode VERIFY at
+  T06/T07. dbmate v2.36.0 MIT, linux amd64/arm64 assets cover VPS arches;
+  install via release binary, VERIFY on VPS. Cloudflare Free supports WS,
+  idle timeout unpublished (25 s heartbeat stands), Cache Rules on Free can
+  edge-cache snapshot GETs, IP ranges via api.cloudflare.com/client/v4/ips,
+  AOP available on Free. Ping bytes estimated 0.6 to 1.2 KB per ping; S2 gate
+  0.6 KB per ping must be measured at 15 s vs 90 s on staging.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
