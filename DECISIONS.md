@@ -195,6 +195,17 @@ PLAN.md 0.3).
   with no network on first paint. Merged-manifest audit: source has no
   location permissions; only INTERNET in debug/profile; no forbidden
   permissions. `flutter analyze` clean, `flutter test` passes.
+- 2026-10-02: T03 done. CI `ci.yml` with actions pinned by SHA (checkout v4
+  11d5960a, setup-java v5 b6effb05, flutter-action v2 1a449444, setup-deno v2
+  22d081ff deferred, gitleaks-action v2 ff98106e; SHAs verified via
+  api.github.com). Used setup-java v5, not v4, because v4 is deprecated.
+  Jobs: flutter analyze, format check, test, manifest audit, web size report,
+  gitleaks. Deno job deferred to T06 per PLAN. Manifest audit is source-level;
+  full merged-manifest check lands in T45. Size report is non-blocking in T03:
+  local `flutter build web --release` produced 40 MB uncompressed (canvaskit
+  37 MB, main.dart.js 1.7 MB); compressed first-load and AAB gates land in
+  T44/T45 after S4 wasm/CDN work. Local verify: analyze clean, test passes,
+  audit PASS, YAML parses.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

@@ -1,0 +1,45 @@
+# CI for T03. See PLAN.md 17.2.
+# Actions pinned by SHA. Server (deno) job lands in T06.
+# Verified SHAs 2026-10-02 via api.github.com commits endpoints.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.47.6
+          channel: stable
+          cache: true
+      - name: Flutter analyze
+        working-directory: app
+        run: flutter analyze
+      - name: Dart format check
+        working-directory: app
+        run: dart format --set-exit-if-changed lib test
+      - name: Flutter test
+        working-directory: app
+        run: flutter test
+      - name: Manifest audit
+        run: bash tools/ci/manifest_audit.sh
+      - name: Web size report
+        working-directory: app
+        run: flutter build web --release
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
