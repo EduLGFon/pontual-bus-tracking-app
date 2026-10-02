@@ -11,4 +11,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - S3 and S4 spikes done (flutter_map 8.3.2 plus 50 MB cache plus OSM policy; --wasm plus no-CDN plus wake lock findings).
 - T06 server skeleton done (Deno 2.9.7, Hono 4.13.12, fail-fast config, health plus metrics, CI server job).
 - T07 database done (migration 0001, repositories, runtime config loader, no_location_at_rest, CI postgres plus dbmate).
+- T08 security middleware done (Valibot 1.5.0, token auth, device plus consent plus delete routes, AC01 plus AC03 plus AC11 plus AC13 plus AC18 plus AC23).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

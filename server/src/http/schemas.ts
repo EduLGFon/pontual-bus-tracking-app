@@ -1,0 +1,29 @@
+// Strict request schemas. Unknown keys rejected, finite numbers only.
+// Every body is parsed here at the boundary; handlers receive typed values.
+// See PLAN.md 6.5 and 14.4.
+import * as v from "@valibot/valibot";
+
+function strictObject<T extends v.ObjectEntries>(entries: T) {
+  return v.strictObject(entries);
+}
+
+/** POST /v1/devices takes an empty object. */
+export const DevicesBody = strictObject({});
+
+/** POST /v1/consents takes the consent version only. No ids. */
+export const ConsentsBody = strictObject({
+  version: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(32767)),
+});
+
+export function parseJson<T>(
+  schema: v.GenericSchema<T>,
+  input: unknown,
+): T | null {
+  const r = v.safeParse(schema, input);
+  return r.success ? r.output : null;
+}
+
+/** True for finite numbers only (rejects NaN, Infinity). */
+export function isFiniteNumber(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n);
+}

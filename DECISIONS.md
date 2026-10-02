@@ -270,6 +270,18 @@ PLAN.md 0.3).
   T04. CI server job now runs postgres:16 service plus dbmate 2.36.0 migrate
   plus deno task test. Local verify: migrate applies to clean DB, 11 tests
   pass, fmt/lint/check clean.
+- 2026-10-02: T08 done. Schema library INFRA-15 decided: Valibot 1.5.0 MIT via
+  JSR, zero deps, Deno-compatible; safeParse at the boundary with strict
+  objects. Middleware order per PLAN 6.9 with secure headers and exact-origin
+  CORS. Token is bm1_ plus 43 base64url chars from 32 CSPRNG bytes, SHA-256
+  stored, 30-day expiry, in-memory 60 s lookup cache evicted on delete.
+  Routes: POST /v1/devices, POST /v1/consents (version must equal current),
+  DELETE /v1/me (cascade plus evict; trip eviction lands in T10 with the
+  engine). AC03 note: the device id returned at registration is by design
+  per PLAN 6.5; no trip or session ids exist anywhere. Per-IP and global
+  registration caps plus per-device consents and delete caps. Local verify:
+  17 tests pass covering AC01, AC03, AC11, AC13, AC18, AC23; live boot
+  register plus consent plus delete plus 401 paths verified via curl.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
