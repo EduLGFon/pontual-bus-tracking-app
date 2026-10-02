@@ -259,6 +259,17 @@ PLAN.md 0.3).
   request validation lands. CI server job added with setup-deno v2 pinned.
   Local verify: deno fmt, lint, check clean; 5 tests pass; boot serves health
   and metrics; invalid env refuses to start.
+- 2026-10-02: T07 done. Migration 0001 with devices, consents,
+  blocked_devices, app_config plus pontual_app least-privilege grants; no
+  location columns (AC22 scan passes). Repositories for devices, consents,
+  blocked, plus runtime config loader with compiled defaults and
+  app_config overrides. postgres.js 3.4.9 Unlicense via npm specifier.
+  postgres.js scans PG* env at startup, so the test task uses broad
+  --allow-env with dummy CI values; dev and start keep the scoped list.
+  Local PG is postgres:16-alpine on 5433; prod PG version still VERIFY at
+  T04. CI server job now runs postgres:16 service plus dbmate 2.36.0 migrate
+  plus deno task test. Local verify: migrate applies to clean DB, 11 tests
+  pass, fmt/lint/check clean.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

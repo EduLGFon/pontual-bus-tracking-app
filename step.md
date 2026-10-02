@@ -1,34 +1,35 @@
-# step.md - Current step: T06 server skeleton
+# step.md - Current step: T07 database
 
-Status: done 2026-10-02. Next: T07. T04 and T05 blocked on owner infra answers.
+Status: done 2026-10-02. Next: T08. T04 and T05 blocked on owner infra answers.
 
-## 1. What T06 is
+## 1. What T07 is
 
-PLAN.md section 16, Milestone M1. Deliverable: `server/` skeleton with deno.json, import map, lock, fail-fast config, Log wrapper, Hono app, GET /v1/health, graceful shutdown, internal metrics listener, CI job.
+PLAN.md section 16, Milestone M1. Deliverable: migration 0001 (tables, roles and grants), dbmate setup, repositories (devices, consents, blocked, appConfig), app_config loader with 30 s refresh contract, no_location_at_rest test.
 
 ## 2. Done 2026-10-02
 
-- Deno 2.9.7 with Hono 4.13.12 MIT via JSR, deno.lock committed.
-- Fail-fast env validation per PLAN 6.3, Log wrapper with no PII API, health endpoint, generic errors, shutdown handlers, localhost metrics.
-- Minimal permission flags, no write/run/ffi/sys.
-- CI server job added with pinned setup-deno.
-- Verified: deno fmt/lint/check clean, 5 tests pass, live boot serves health and metrics, invalid env refuses.
+- Migration `0001_init.sql` with dbmate up and down blocks; least-privilege grants to pontual_app; no coordinate columns.
+- Repositories with parameterized queries scoped by device id or token hash.
+- Runtime config loader with compiled defaults and app_config overrides.
+- Tests: config, health, no_location_at_rest, plus DB integration (devices, consents, blocked, purge, runtime config).
+- CI server job runs postgres:16 service, dbmate migrate, deno task test.
+- Verified: migrate applies to clean DB, 11 tests pass, fmt/lint/check clean.
 
-## 3. Acceptance criteria (from PLAN T06)
+## 3. Acceptance criteria (from PLAN T07)
 
-- Server boots with minimal permissions; invalid env refuses to start.
+- Migrations apply to a clean DB; AC22 passes.
 
 ## 4. Verify
 
-1. `deno fmt --check`, `deno lint`, `deno check src/main.ts` clean (in `server/`).
-2. `deno task test` passes.
-3. Live boot serves `/v1/health` and metrics; bad env exits non-zero.
+1. `dbmate -d ./db/migrations up` on a clean DB.
+2. `deno task test` passes (needs TEST_DATABASE_URL).
+3. `deno fmt --check`, `deno lint`, `deno check src/main.ts` clean.
 
 ## 5. Rules
 
-- One logical change only. No DB, auth, or engine code (T07 onward).
-- Docs English. No em dashes. Commit: `feat: add server skeleton (T06)`.
+- One logical change only. No auth middleware or engine code (T08 onward).
+- Docs English. No em dashes. Commit: `feat: add database layer (T07)`.
 
 ## 6. Next
 
-T07 (migration 0001 plus repositories plus app_config loader plus no_location_at_rest test). Needs local PostgreSQL via Docker; staging/prod VPS work stays blocked on owner.
+T08 (security middleware plus device, consent, and delete endpoints). Schema library choice (Valibot vs Zod) lands there.
