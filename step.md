@@ -1,6 +1,6 @@
 # step.md - Current step: T01 repo skeleton
 
-Status: not started. This is the single next step. Do not start T02, T03, or any spike until T01 acceptance passes.
+Status: done 2026-10-02. Next: T02. Do not start T03 or any spike until T02 acceptance passes.
 
 ## 1. What T01 is
 
@@ -10,23 +10,18 @@ Why now: the repo has only `AGENTS.md`, `PLAN.md`, `LICENSE`, `.git/`. Nothing e
 
 ## 2. Done vs remaining
 
-Done:
+Done 2026-10-02 (owner answers D22-D28 recorded):
 
-- `AGENTS.md` present.
-- `PLAN.md` v1.1 present.
-- `DECISIONS.md` created with D01-D21 imported and INFRA-01 to INFRA-24 opened.
-- `LICENSE` file exists but is GPLv2, which conflicts with PLAN 19.2 item 3 (suggest AGPL-3.0 or MIT). Needs owner call in this step, recorded as INFRA-19.
+- `AGENTS.md`, `PLAN.md` present.
+- `DECISIONS.md` with D01-D21 plus owner round 1 (D22-D28).
+- `LICENSE` kept as GPLv2 per owner (D23).
+- Directories: `app/ server/ data/ tools/ docs/privacy docs/security docs/runbooks docs/field-tests .github/workflows .github/ISSUE_TEMPLATE env/`.
+- `README.md` (name Pontual, appId `com.spotnik.pontual`, domains TBD), `CHANGELOG.md`, `.gitignore`, `SECURITY.md`.
+- `env/example.json`, `server/.env.example` (names only, dummy values).
+- PR template and task issue template with DoD checklist.
+- Verified: tree lists skeleton, `git status` shows only intended new files, secret scan clean (only spec text matches), no em dashes.
 
-Remaining (all part of this one step):
-
-1. Directories: `app/ server/ data/ tools/ docs/privacy docs/security docs/runbooks docs/field-tests .github/workflows .github/ISSUE_TEMPLATE`.
-2. `README.md`: setup, run, test, release placeholders with pinned Flutter and Deno versions marked TODO (pins land in T02 and T06; do not invent version numbers).
-3. `CHANGELOG.md`: `0.1.0-alpha.0` unreleased section.
-4. `.gitignore`: Flutter, Deno, `build/`, env files (`server/.env`, `env/*.json` except `*.example.json`), keystores, IDE.
-5. `server/.env.example` and `env/example.json`: variable names only, no secrets.
-6. `SECURITY.md`: contact channel placeholder, supported versions, pointer to PLAN 12.7 incident steps.
-7. Issue template and PR template containing the Definition of Done from PLAN 14.10.
-8. Owner answers for T01 scope only: code licence (INFRA-19) and confirmation of repo name `busmateus`.
+Remaining: commit as `chore: add repo skeleton (T01)`.
 
 ## 3. Acceptance criteria (from PLAN T01)
 
