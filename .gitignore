@@ -1,0 +1,47 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.g.dart
+*.freezed.dart
+
+# Deno (lockfiles are committed, never ignored)
+
+# Env and secrets - never commit real values
+server/.env
+.env
+env/dev.json
+env/staging.json
+env/prod.json
+*.keystore
+*.jks
+*.p8
+*.p12
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs
+build/
+dist/
+*.aab
+*.apk
+*.ipa
+
+# Backups and dumps
+*.dump
+*.sql.gz
+*.age
+
+# Traces and device logs - never commit raw GPS
+*.gpx
+*.tcx
+*.fit
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
