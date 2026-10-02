@@ -1,0 +1,38 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - web/**
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    avoid_print: error
+    cancel_subscriptions: error
+    close_sinks: error
+    unawaited_futures: error
+    use_build_context_synchronously: error
+    avoid_dynamic_calls: error
+    only_throw_errors: error
+
+linter:
+  rules:
+    always_declare_return_types: true
+    avoid_print: true
+    cancel_subscriptions: true
+    close_sinks: true
+    unawaited_futures: true
+    use_build_context_synchronously: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: true
+    require_trailing_commas: true
+    avoid_dynamic_calls: true
+    only_throw_errors: true
+    # PLAN 14.2 requires public_member_api_docs for domain/ and data/.
+    # Enabled globally in T02; T18+ may scope it if noise outweighs value.
+    # See DECISIONS.md#D22-T02.
+    public_member_api_docs: true

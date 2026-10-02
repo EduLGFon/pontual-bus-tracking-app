@@ -182,6 +182,19 @@ PLAN.md 0.3).
 - 2026-10-02: Owner answers round 1 recorded in section 6 (D22-D28). VPS
   baseline set. App name and applicationId set. Web sharing in scope. D20
   confirmed.
+- 2026-10-02: T01 fix. Restored `app/` skeleton directory (was misplaced as
+  `docs/app/`). Verified no `build/`, no real `.env`, no keystore, no private
+  keys. `DATABASE_URL` appears only in `server/.env.example` dummy value plus
+  spec text in PLAN, AGENTS, step.
+- 2026-10-02: T02 done. Flutter 3.47.6 pinned via `.fvmrc` (INFRA-22 partial;
+  CI pin lands in T03). `flutter create --org com.spotnik --project-name
+  pontual --platforms=android,web --empty` confirms applicationId
+  `com.spotnik.pontual` per D22. Added `flutter_riverpod 3.4.3` only
+  (allow-list PLAN 8.2, no ADR needed). Strict analyzer per PLAN 14.2 with
+  `public_member_api_docs` enabled globally. Empty `ProviderScope` app boots
+  with no network on first paint. Merged-manifest audit: source has no
+  location permissions; only INTERNET in debug/profile; no forbidden
+  permissions. `flutter analyze` clean, `flutter test` passes.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
