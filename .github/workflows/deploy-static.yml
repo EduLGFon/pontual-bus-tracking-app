@@ -1,0 +1,50 @@
+# Static deploy to Cloudflare Pages. See PLAN.md 17.2.
+# Needs owner secrets: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Verified SHAs 2026-10-03 via api.github.com commits endpoints.
+name: deploy-static
+on:
+  push:
+    branches: [master]
+    paths:
+      - "data/**"
+      - "app/**"
+      - ".github/workflows/deploy-static.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: static-prod
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.47.6
+          channel: stable
+          cache: true
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: 2.9.7
+      - name: Build data bundle
+        working-directory: tools
+        env:
+          API_ORIGIN: ${{ vars.API_ORIGIN }}
+        run: deno task data-build
+      - name: Build web
+        working-directory: app
+        run: flutter build web --release --no-web-resources-cdn
+      - name: Assemble Pages directory
+        run: |
+          rm -rf pages && mkdir -p pages/data
+          cp -r app/build/web/* pages/
+          cp build/lines.*.json build/manifest.json build/config.json pages/data/
+          cp build/_headers pages/_headers
+          ls pages/data
+      - name: Deploy to Pages
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy pages --project-name=pontual

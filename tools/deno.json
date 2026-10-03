@@ -2,8 +2,8 @@
   "tasks": {
     "sim": "deno run --allow-net=127.0.0.1,localhost sim/main.ts",
     "data-validate": "deno run --allow-read=../data data/main.ts validate",
-    "data-build": "deno run --allow-read=../data --allow-write=../build data/main.ts build",
-    "data-test": "deno test --allow-read=../data data/main_test.ts",
+    "data-build": "deno run --allow-read=../data --allow-write=../build --allow-env=API_ORIGIN data/main.ts build",
+    "data-test": "deno test --allow-read=../data,../build --allow-write=../build --allow-env=API_ORIGIN data/main_test.ts",
     "fmt": "deno fmt --check",
     "lint": "deno lint"
   },

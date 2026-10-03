@@ -1,6 +1,11 @@
 // Data tool tests: schema-driven structure plus semantic rules.
 import { assert, assertEquals, assertThrows } from "@std/assert";
-import { checkSemantics, checkStructure } from "./main.ts";
+import {
+  buildBundle,
+  checkSemantics,
+  checkStructure,
+  readLineFiles,
+} from "./main.ts";
 
 const SCHEMA = {
   required: ["schema", "id", "code"],
@@ -61,4 +66,17 @@ Deno.test("semantics rejects duplicates and unsorted times", () => {
   checkSemantics([line(1, "a1", ["05:30", "06:10"])]);
   assertEquals(typeof checkSemantics, "function");
   assert(true);
+});
+
+Deno.test("bundle writes headers with revalidation rules", async () => {
+  const files = await readLineFiles();
+  checkSemantics(files);
+  await buildBundle(files);
+  const headers = await Deno.readTextFile(
+    new URL("../../build/_headers", import.meta.url),
+  );
+  assert(headers.includes("/data/manifest.json"));
+  assert(headers.includes("/data/config.json"));
+  assert(headers.includes("no-cache"));
+  assert(headers.includes("Content-Security-Policy"));
 });

@@ -244,6 +244,26 @@ export async function buildBundle(
     new URL("config.json", BUILD_DIR),
     JSON.stringify(config, null, 2),
   );
+
+  // Pages headers. API origin comes from the environment; production values
+  // land with INFRA-05. See PLAN.md 12.5.
+  const api = Deno.env.get("API_ORIGIN") ?? "https://api.localhost";
+  const ws = api.replace(/^http/, "ws");
+  const headers = `/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' ${api} ${ws} https://tile.openstreetmap.org; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+/data/*
+  Cache-Control: public, max-age=31536000, immutable
+/data/manifest.json
+  Cache-Control: no-cache
+/data/config.json
+  Cache-Control: no-cache
+`;
+  await Deno.writeTextFile(new URL("_headers", BUILD_DIR), headers);
   return manifest;
 }
 

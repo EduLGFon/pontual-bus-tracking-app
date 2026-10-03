@@ -320,6 +320,13 @@ PLAN.md 0.3).
   T15. CI has a data job with fmt, lint, tool tests, validation, build,
   and a size-budget gate. Local verify: tool tests pass, empty set builds,
   bundle-backed endpoints serve live.
+- 2026-10-03: T16 partial (repo side done). The data builder writes
+  build/_headers from PLAN 12.5 with the API origin from the environment,
+  and deploy-static.yml builds data plus web and deploys to Pages via a
+  pinned wrangler-action. Still owner-blocked: Cloudflare project and DNS
+  (INFRA-05, INFRA-06), API_TOKEN and ACCOUNT_ID secrets, and the
+  production API_ORIGIN value. Local verify: _headers content checked,
+  builder test asserts the revalidation rules, both workflows parse.
 - 2026-10-03: T15 done. All 21 urban lines seeded from onibus.online
   (retrieved 2026-10-03): 4 pilot lines (60, 62, 64, 66) with transcribed
   weekday timetables plus Sat and Sun where published, 17 names-only lines
