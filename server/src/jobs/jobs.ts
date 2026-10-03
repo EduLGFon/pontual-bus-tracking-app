@@ -83,16 +83,37 @@ export function startJobs(deps: JobsDeps): Jobs {
   );
   timers.push(
     setInterval(async () => {
-      deps.onConfig(await runConfigRefresh(deps.sql));
+      // Never let a failing refresh kill the process: reads stay up
+      // while the database is down. See DECISIONS.md T34-fix.
+      try {
+        deps.onConfig(await runConfigRefresh(deps.sql));
+      } catch {
+        console.log(
+          JSON.stringify({ level: "error", msg: "config refresh failed" }),
+        );
+      }
     }, deps.configRefreshMs),
   );
   const nowMs = Date.now();
   const purgeDelay = Math.max(0, deps.purgeAtMs(nowMs) - nowMs);
   timers.push(
     setTimeout(async () => {
-      await runPurge(deps.sql, new Date());
-      timers.push(setInterval(async () => {
+      // A failing purge must not crash the process either.
+      try {
         await runPurge(deps.sql, new Date());
+      } catch {
+        console.log(
+          JSON.stringify({ level: "error", msg: "device purge failed" }),
+        );
+      }
+      timers.push(setInterval(async () => {
+        try {
+          await runPurge(deps.sql, new Date());
+        } catch {
+          console.log(
+            JSON.stringify({ level: "error", msg: "device purge failed" }),
+          );
+        }
       }, 86400 * 1000));
     }, purgeDelay),
   );

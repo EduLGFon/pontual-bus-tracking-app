@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/features/home/home_screen.dart';
 import 'package:pontual/features/line/line_screen.dart';
+import 'package:pontual/features/trip/trip_controller.dart';
+import 'package:pontual/features/trip/trip_screen.dart';
 
 /// Builds a placeholder scaffold with semantics labels in pt-BR.
 Widget placeholder(String title, String semanticsLabel) {
@@ -48,6 +50,10 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/trip',
         builder: (BuildContext context, GoRouterState state) {
+          final Object? extra = state.extra;
+          if (extra is TripController) {
+            return TripRoute(controller: extra);
+          }
           return const TripPlaceholder();
         },
       ),
@@ -143,7 +149,8 @@ class WelcomePlaceholder extends StatelessWidget {
   }
 }
 
-/// Trip screen skeleton.
+/// Trip screen fallback for deep links without an active controller.
+/// The share flow always navigates with a started TripController.
 class TripPlaceholder extends StatelessWidget {
   /// Creates the trip skeleton.
   const TripPlaceholder({super.key});

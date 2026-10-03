@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:pontual/app/providers.dart';
@@ -15,6 +14,7 @@ import 'package:pontual/app/theme.dart';
 import 'package:pontual/data/realtime/vehicle_repository.dart';
 import 'package:pontual/data/static_data/static_data.dart';
 import 'package:pontual/features/map/tile_source.dart';
+import 'package:pontual/features/trip/share_flow.dart';
 
 /// Map tab for one line.
 class MapTab extends ConsumerStatefulWidget {
@@ -141,7 +141,7 @@ class _MapTabState extends ConsumerState<MapTab> {
         Padding(
           padding: const EdgeInsets.all(16),
           child: FilledButton(
-            onPressed: () => context.go('/trip'),
+            onPressed: () => shareTrip(context, ref, widget.line),
             child: const Text(StringsPt.shareTrip),
           ),
         ),
@@ -221,7 +221,7 @@ class _MapTabState extends ConsumerState<MapTab> {
                   child: const Text('Ver horários'),
                 ),
                 FilledButton(
-                  onPressed: () => context.go('/trip'),
+                  onPressed: () => shareTrip(context, ref, widget.line),
                   child: const Text(StringsPt.shareTrip),
                 ),
               ],
@@ -240,7 +240,7 @@ class _MapTabState extends ConsumerState<MapTab> {
         if (showButton) ...<Widget>[
           const SizedBox(height: 12),
           FilledButton(
-            onPressed: () => context.go('/trip'),
+            onPressed: () => shareTrip(context, ref, widget.line),
             child: const Text(StringsPt.shareTrip),
           ),
         ],

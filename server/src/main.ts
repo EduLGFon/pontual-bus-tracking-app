@@ -41,10 +41,22 @@ const seed = config.linesJson.map((l) => ({
   isActive: l.isActive,
   route: null,
 }));
-const lines = registryResolver([
+const registry = [
   ...bundled,
   ...seed.filter((s) => !bundled.some((b) => b.id === s.id)),
-]);
+];
+const lines = registryResolver(registry);
+console.log(
+  JSON.stringify({
+    level: registry.length === 0 ? "warn" : "info",
+    msg: "lines loaded",
+    count: registry.length,
+    dataDir: config.dataDir,
+    hint: registry.length === 0
+      ? "registry empty: reads 404; run the data build and set DATA_DIR"
+      : undefined,
+  }),
+);
 const store = createStore();
 const hub = new Hub();
 const engine = defaultEngineConfig();

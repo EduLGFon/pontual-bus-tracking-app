@@ -233,3 +233,29 @@ class EndCard extends StatelessWidget {
     );
   }
 }
+
+/// /trip route: shows the active trip and owns the controller created by
+/// the share flow. Leaving the screen disposes the controller.
+class TripRoute extends StatefulWidget {
+  /// Creates the trip route for [controller].
+  const TripRoute({required this.controller, super.key});
+
+  /// Controller started by [shareTrip].
+  final TripController controller;
+
+  @override
+  State<TripRoute> createState() => _TripRouteState();
+}
+
+class _TripRouteState extends State<TripRoute> {
+  @override
+  void dispose() {
+    widget.controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TripScreen(controller: widget.controller);
+  }
+}
