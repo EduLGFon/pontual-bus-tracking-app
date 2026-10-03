@@ -6,6 +6,7 @@ import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/features/home/home_screen.dart';
 import 'package:pontual/features/line/line_screen.dart';
 import 'package:pontual/features/settings/about_screen.dart';
+import 'package:pontual/features/settings/privacy_screen.dart';
 import 'package:pontual/features/settings/settings_screen.dart';
 import 'package:pontual/features/trip/trip_controller.dart';
 import 'package:pontual/features/trip/trip_screen.dart';
@@ -68,19 +69,19 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/privacy',
         builder: (BuildContext context, GoRouterState state) {
-          return const PrivacyPlaceholder();
+          return const PrivacyScreen();
         },
         routes: <GoRoute>[
           GoRoute(
             path: 'policy',
             builder: (BuildContext context, GoRouterState state) {
-              return const PolicyPlaceholder();
+              return const PolicyTextScreen(kind: 'policy');
             },
           ),
           GoRoute(
             path: 'terms',
             builder: (BuildContext context, GoRouterState state) {
-              return const TermsPlaceholder();
+              return const PolicyTextScreen(kind: 'terms');
             },
           ),
         ],
@@ -160,39 +161,6 @@ class TripPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return placeholder(StringsPt.tripTitle, StringsPt.tripTitle);
-  }
-}
-
-/// Privacy center skeleton.
-class PrivacyPlaceholder extends StatelessWidget {
-  /// Creates the privacy skeleton.
-  const PrivacyPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.privacyTitle, StringsPt.privacyTitle);
-  }
-}
-
-/// Privacy policy skeleton.
-class PolicyPlaceholder extends StatelessWidget {
-  /// Creates the policy skeleton.
-  const PolicyPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.privacyTitle, StringsPt.privacyTitle);
-  }
-}
-
-/// Terms skeleton.
-class TermsPlaceholder extends StatelessWidget {
-  /// Creates the terms skeleton.
-  const TermsPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.privacyTitle, StringsPt.privacyTitle);
   }
 }
 

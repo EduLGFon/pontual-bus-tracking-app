@@ -6,3 +6,9 @@ library;
 
 /// Support contact e-mail for data-subject requests. Empty until decided.
 const String supportEmail = '';
+
+/// Canonical privacy policy page. Empty until the static domain lands.
+const String policyUrl = '';
+
+/// Canonical terms page. Empty until the static domain lands.
+const String termsUrl = '';

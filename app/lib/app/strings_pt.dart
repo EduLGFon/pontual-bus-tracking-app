@@ -185,4 +185,43 @@ class StringsPt {
 
   /// Row opening the source repository.
   static const String aboutRepo = 'Código-fonte';
+
+  /// Privacy delete action.
+  static const String privacyDelete = 'Apagar meus dados';
+
+  /// Delete confirmation title.
+  static const String privacyDeleteTitle = 'Apagar meus dados?';
+
+  /// Delete confirmation body.
+  static const String privacyDeleteBody =
+      'Isso encerra sua viagem, apaga os dados ligados a este aparelho no servidor e reinicia o app.';
+
+  /// Cancel button.
+  static const String privacyCancel = 'Cancelar';
+
+  /// Delete confirm button.
+  static const String privacyConfirmDelete = 'Apagar';
+
+  /// Offline delete error: honest, keeps local data.
+  static const String privacyOffline =
+      'Sem conexão. Tente novamente quando estiver online.';
+
+  /// Consent revocation action.
+  static const String privacyRevoke = 'Revogar consentimento';
+
+  /// Revocation confirmation.
+  static const String privacyRevoked =
+      'Consentimento revogado. Vamos pedir de novo na próxima viagem.';
+
+  /// Policy row.
+  static const String privacyPolicy = 'Política de Privacidade';
+
+  /// Terms row.
+  static const String privacyTerms = 'Termos de Uso';
+
+  /// Collection summary section title.
+  static const String privacyCollectsTitle = 'O que coletamos';
+
+  /// Contact row for data-subject requests.
+  static const String privacyContact = 'Contato para seus dados';
 }
