@@ -590,6 +590,12 @@ PLAN.md 0.3).
   with the 1-page pt-BR guide, known-limitations summary, and a
   copy-paste feedback form. Organizer contact still [DEFINIR]
   (INFRA-23).
+- 2026-10-03: T50 done. `docs/runbooks/ops.md` covers the PLAN 18
+  table plus the weekly check. Kill-switch drill executed on an
+  isolated local server plus throwaway DB (soak untouched):
+  pre-switch start 201, post-switch start and ping `503 maint`
+  inside the 30 s refresh, reads 200 throughout, rollback to 201.
+  Drill DB dropped afterwards. Next drill on the VPS after T04/T05.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
