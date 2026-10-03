@@ -10,6 +10,7 @@ function testApp() {
     lines: registryResolver([]),
     hub: new Hub(),
     followerJitterS: 0,
+    onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: [],
   });

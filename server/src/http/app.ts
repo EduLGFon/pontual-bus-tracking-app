@@ -20,6 +20,7 @@ export interface AppOptions {
   followerJitterS: number;
   trustCloudflare: boolean;
   allowedOrigins: string[];
+  onVehicle: (lineId: number) => void;
 }
 
 type Vars = {
@@ -84,6 +85,7 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
         store: opts.store,
         lines: opts.lines,
         followerJitterS: opts.followerJitterS,
+        onVehicle: opts.onVehicle,
       }),
     );
   }

@@ -46,6 +46,7 @@ function app() {
     lines: registryResolver([{ id: 7, isActive: true, route: null }]),
     hub: new Hub(),
     followerJitterS: 0,
+    onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: [],
   });

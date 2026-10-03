@@ -32,4 +32,15 @@ Deno.test("invalid env refuses to start", () => {
   assertThrows(() => loadConfig(badPort), Error, "invalid env PORT");
   const badEnv = { ...baseEnv(), APP_ENV: "qa" };
   assertThrows(() => loadConfig(badEnv), Error, "invalid env APP_ENV");
+  const badLines = { ...baseEnv(), LINES_JSON: "[1]" };
+  assertThrows(() => loadConfig(badLines), Error, "invalid env LINES_JSON");
+});
+
+Deno.test("lines seed defaults empty and parses", () => {
+  assertEquals(loadConfig(baseEnv()).linesJson, []);
+  const cfg = loadConfig({
+    ...baseEnv(),
+    LINES_JSON: '[{"id":7,"isActive":true}]',
+  });
+  assertEquals(cfg.linesJson, [{ id: 7, isActive: true }]);
 });

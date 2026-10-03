@@ -300,6 +300,17 @@ PLAN.md 0.3).
   client auto-end work. Local verify: 46 tests pass covering AC02, AC07,
   AC09, AC10, AC14; live register plus consent plus start plus ping plus
   delete flow verified via curl.
+- 2026-10-02: T13 done. Driver simulator in tools/sim with buses, riders,
+  abuse scenarios (localhost only), and a latency report over real HTTP
+  plus WebSocket. Two fixes from the first runs: applyPing now emits
+  vehicleUpdated so every position update broadcasts immediately (viewers
+  previously waited for tick-driven changes), and dev/start tasks list the
+  full PG* env set the postgres.js shim probes (scoped flags kept; the
+  driver names each missing var at boot). LINES_JSON seeds lines for local
+  runs until the T14 bundle lands. CI runs tools fmt/lint plus a 60 s sim
+  smoke. Local verify: 90 s and 45 s runs with hand-overs observed,
+  snapshots flowing, p50 latency 4 to 7 ms, no errors. The full 30-min run
+  and 8-hour soak land in T46.
 - 2026-10-02: T12 done. Public reads plus stream: GET
   /v1/lines/{id}/vehicles with ETag, 304, and 5 s edge cache headers; GET
   /v1/live with 10 s headers; read-only hub with per-IP and global caps,

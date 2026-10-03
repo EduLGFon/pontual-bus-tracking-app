@@ -16,4 +16,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T10 trip endpoints done (start plus ping plus delete, quotas plus resume plus kill switch, AC02 plus AC07 plus AC09 plus AC10 plus AC14).
 - T11 background jobs done (guarded tick plus config refresh plus purge plus db health, restart test 19).
 - T12 reads and stream done (vehicles snapshot plus ETag, live lines, WS hub with caps plus heartbeat plus bye, AC05 plus AC06 plus AC08).
+- T13 simulator done (buses plus riders plus abuse plus latency report, immediate position broadcast, CI smoke).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

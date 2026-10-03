@@ -34,6 +34,7 @@ export interface TripDeps {
   store: Store;
   lines: LineResolver;
   followerJitterS: number;
+  onVehicle: (lineId: number) => void;
 }
 
 type Body = { kind: "json"; value: unknown } | { kind: "media" } | {
@@ -160,6 +161,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
     const parsed = v.safeParse(TripPingBody, body.value);
     if (!parsed.success) return c.json({ e: "bad_request" }, 400);
     const trip = deps.store.trips.get(deviceId);
+    const lineId = trip?.lineId;
     const route = trip ? deps.lines(trip.lineId)?.route ?? null : null;
     const events: EngineEvent[] = [];
     const out = applyPing(
@@ -183,6 +185,11 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
       jitterS(deps.followerJitterS),
     );
     if (isGone(out)) return c.json({ e: "gone" }, 404);
+    if (
+      lineId !== undefined && events.some((e) => e.kind === "vehicleUpdated")
+    ) {
+      deps.onVehicle(lineId);
+    }
     if (out.end) return c.json({ r: out.role, n: out.intervalS, e: out.end });
     return c.json({ r: out.role, n: out.intervalS });
   });

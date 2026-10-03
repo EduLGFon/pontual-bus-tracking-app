@@ -255,6 +255,7 @@ export function applyPing(
     v.speedMps = trip.speedMps;
     v.fixAtMs = nowMs;
     v.updatedAtMs = nowMs;
+    events.push({ kind: "vehicleUpdated", lineId: trip.lineId });
   }
   // 11. Role and interval, with two-phase hand-over.
   if (trip.vehicleId === null || !v) {

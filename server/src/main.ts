@@ -23,6 +23,7 @@ function readEnv(): Record<string, string | undefined> {
     "DATA_DIR",
     "LOG_LEVEL",
     "METRICS_PORT",
+    "LINES_JSON",
   ];
   const out: Record<string, string | undefined> = {};
   for (const n of names) out[n] = Deno.env.get(n);
@@ -33,11 +34,31 @@ const config = loadConfig(readEnv());
 setLogLevel(config.logLevel);
 
 const sql = openDb(config.databaseUrl);
-// Line registry loads from the built bundle in T14; empty until then.
-const lines = registryResolver([]);
+// Line registry: local-dev seed via LINES_JSON until the T14 bundle lands.
+const lines = registryResolver(
+  config.linesJson.map((l) => ({
+    id: l.id,
+    isActive: l.isActive,
+    route: null,
+  })),
+);
 const store = createStore();
 const hub = new Hub();
 const engine = defaultEngineConfig();
+
+function broadcastLine(lineId: number): void {
+  const nowMs = Date.now();
+  const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
+  hub.broadcast(
+    lineId,
+    JSON.stringify({
+      l: lineId,
+      t: Math.floor(nowMs / 1000),
+      v: JSON.parse(body).v,
+    }),
+  );
+}
+
 const app = buildApp({
   sql,
   store,
@@ -46,6 +67,7 @@ const app = buildApp({
   followerJitterS: 10,
   trustCloudflare: config.trustCloudflare,
   allowedOrigins: config.allowedOrigins,
+  onVehicle: broadcastLine,
 });
 
 const controller = new AbortController();
@@ -92,18 +114,7 @@ const jobs = startJobs({
   },
   dbHealthMs: 10 * 1000,
   onTick: (changedLines) => {
-    const nowMs = Date.now();
-    for (const lineId of changedLines) {
-      const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
-      hub.broadcast(
-        lineId,
-        JSON.stringify({
-          l: lineId,
-          t: Math.floor(nowMs / 1000),
-          v: JSON.parse(body).v,
-        }),
-      );
-    }
+    for (const lineId of changedLines) broadcastLine(lineId);
   },
   onConfig: () => {},
 });

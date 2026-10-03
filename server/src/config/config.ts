@@ -16,6 +16,8 @@ export interface ServerConfig {
   logLevel: LogLevel;
   metricsHost: string;
   metricsPort: number;
+  /** Local-dev line seed until the T14 bundle lands. Empty in staging/prod. */
+  linesJson: { id: number; isActive: boolean }[];
 }
 
 function required(
@@ -88,6 +90,23 @@ export function loadConfig(
     throw new Error("invalid env LOG_LEVEL");
   }
   const metrics = parseHostPort(required("METRICS_PORT", env), "METRICS_PORT");
+  const linesRaw = env["LINES_JSON"] ?? "[]";
+  let linesJson: { id: number; isActive: boolean }[];
+  try {
+    const parsed: unknown = JSON.parse(linesRaw);
+    if (!Array.isArray(parsed)) throw new Error("not an array");
+    linesJson = parsed.map((e) => {
+      const id = (e as { id?: unknown }).id;
+      const isActive = (e as { isActive?: unknown }).isActive;
+      if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
+        throw new Error("bad id");
+      }
+      if (typeof isActive !== "boolean") throw new Error("bad isActive");
+      return { id, isActive };
+    });
+  } catch {
+    throw new Error("invalid env LINES_JSON");
+  }
 
   return {
     appEnv: appEnvRaw,
@@ -100,5 +119,6 @@ export function loadConfig(
     logLevel: logRaw,
     metricsHost: metrics.host,
     metricsPort: metrics.port,
+    linesJson,
   };
 }

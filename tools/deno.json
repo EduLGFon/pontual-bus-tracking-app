@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "sim": "deno run --allow-net=127.0.0.1,localhost --allow-env=SIM_BASE,SIM_LINE,SIM_BUSES,SIM_RIDERS,SIM_DURATION_S,SIM_PING_S,SIM_SEED,SIM_ABUSE tools/sim/main.ts"
+  },
+  "imports": {}
+}
