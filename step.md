@@ -1,34 +1,37 @@
-# step.md - Current step: T19 client core
+# step.md - Current step: T20 networking base
 
-Status: done 2026-10-03. Next: T20. Blocked: real route traces, Pages
+Status: done 2026-10-03. Next: T21. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T19 is
+## 1. What T20 is
 
-PLAN.md section 16, Milestone M3. Deliverable: core/ (Clock, Log, geo
-helpers, backoff, Result/failures) plus unit tests.
+PLAN.md section 16, Milestone M3. Deliverable: data/net HTTP client
+(keep-alive, timeouts) plus BusApi base plus token storage and
+registration on demand.
 
 ## 2. Done 2026-10-03
 
-- Clock, Log, geo, backoff, failures with full docs.
-- 9 core unit tests; 97.4 percent line coverage on core.
-- Verified: analyze clean, 12 tests pass.
+- Keep-alive factory with web conditional import, env.dart, token store,
+  BusApi with lazy single registration.
+- Verified: analyze clean, 16 tests pass, manifest audit clean, web build
+  compiles.
 
-## 3. Acceptance criteria (from PLAN T19)
+## 3. Acceptance criteria (from PLAN T20)
 
-- Coverage 90 percent or better on the pure core code.
+- Cold start unaffected with first frame never on network; one
+  registration per install, only when sharing.
 
 ## 4. Verify
 
 1. `flutter analyze` clean in app/.
-2. `flutter test --coverage` passes; core total over 90 percent.
+2. `flutter test` passes in app/.
 
 ## 5. Rules
 
-- One logical change only. No networking code (T20 onward).
-- Docs English. No em dashes. Commit: `feat: add client core utilities (T19)`.
+- One logical change only. No typed endpoint wrappers (T21).
+- Docs English. No em dashes. Commit: `feat: add networking base (T20)`.
 
 ## 6. Next
 
-T20 (data/net HTTP client with keep-alive and timeouts plus BusApi base
-plus token storage and registration on demand).
+T21 (BusApi typed wrappers plus DTOs plus error mapping, fake plus
+real contract tests).

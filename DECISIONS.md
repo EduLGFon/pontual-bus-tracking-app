@@ -358,6 +358,11 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T20 done. Client networking base: keep-alive HTTP factory
+  with a web-safe conditional import, env.dart for dart-define URLs, token
+  store, and BusApi registration on demand (one per install, never at
+  startup). Local verify: analyze clean, 16 tests pass, manifest audit
+  clean, web release build compiles.
 - 2026-10-03: T19 done. Client core utilities: injectable Clock, Log ring
   buffer with no PII API, pure geo helpers, jittered backoff ladder, and
   sealed Result plus AppFailure types. Local verify: analyze clean, 12
