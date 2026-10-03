@@ -5,13 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/testing.dart';
+import 'package:pontual/app/providers.dart';
 import 'package:pontual/app/router.dart';
+import 'package:pontual/data/config/remote_config.dart';
 import 'package:pontual/data/static_data/static_data.dart';
 import 'package:pontual/features/trip/share_flow.dart';
 import 'package:pontual/features/trip/trip_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'trip_rig.dart';
+
+/// Bundled flags for share-flow tests. The real provider loads config.json
+/// through rootBundle, whose engine channel answers only the first
+/// testWidgets per file and hangs later ones; literal JSON keeps these
+/// tests hermetic. See DECISIONS.md T36 test note.
+const String testBundleConfig =
+    '{"min_app_version":"0.1.0","maintenance":false,"message_pt":"",'
+    '"consent_version":1,"tile_url":"https://t.example/{z}/{x}/{y}.png"}';
 
 /// Pilot line for share-flow tests.
 const StaticLine pilotLine = StaticLine(
@@ -33,10 +44,25 @@ const StaticLine regularLine = StaticLine(
   schedules: <Map<String, dynamic>>[],
 );
 
-/// Pumps a button that starts the share flow for [line].
+/// Pumps a button that starts the share flow for [line]. Remote flags come
+/// from literal JSON (see above), never from rootBundle or the network.
 Widget shareButton(StaticLine line) {
   final MutableGateway gateway = MutableGateway();
+  final MockClient client = MockClient((_) async {
+    throw StateError('no network in share-flow tests');
+  });
   return ProviderScope(
+    overrides: [
+      remoteConfigRepoProvider.overrideWith(
+        (Ref ref) async => RemoteConfigRepository(
+          client: client,
+          staticBaseUrl: () => 'https://static.example',
+          bundleConfigJson: testBundleConfig,
+          prefs: SharedPreferences.getInstance,
+          nowMs: () => 0,
+        ),
+      ),
+    ],
     child: MaterialApp(
       home: Builder(
         builder: (BuildContext context) {

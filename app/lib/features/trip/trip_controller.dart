@@ -292,6 +292,9 @@ class TripController extends ChangeNotifier {
   }
 
   void _onOutcome(String token, PingOutcome outcome) {
+    if (_disposed) {
+      return;
+    }
     if (outcome.end != null) {
       void end() async {
         await _finish(token, _kindFor(outcome.end!), outcome.end);
@@ -330,7 +333,8 @@ class TripController extends ChangeNotifier {
 
   Future<void> _checkAutoEnd(String token) async {
     final TripSupervisor? supervisor = _supervisor;
-    if (_checking ||
+    if (_disposed ||
+        _checking ||
         _startedAtMs == null ||
         supervisor == null ||
         !tripInProgress(_state)) {
@@ -481,8 +485,13 @@ class TripController extends ChangeNotifier {
     }
   }
 
+  /// Whether dispose has run. Late ping outcomes and auto-end checks
+  /// after the trip screen is gone are ignored instead of notifying.
+  bool _disposed = false;
+
   @override
   void dispose() {
+    _disposed = true;
     _autoEndTimer?.cancel();
     unawaited(_fixSub?.cancel());
     super.dispose();

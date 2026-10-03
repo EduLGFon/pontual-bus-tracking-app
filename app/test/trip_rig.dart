@@ -155,10 +155,12 @@ Future<void> start(Rig r) async {
   );
   // The start waits for the first accepted fix. Broadcast drops events
   // sent before the service subscribes, so keep offering fixes until
-  // the start observes one.
+  // the start observes one. Microtask yield (not a delayed future) so the
+  // helper works both in real async and in FakeAsync widget tests, where
+  // timers never fire without pumped time.
   for (int i = 0; i < 100 && started == null; i++) {
     r.positions.add(pos(8));
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.microtask(() {});
   }
   expect(started, isTrue);
   for (int i = 0; i < 50 && r.controller.state is! TripActive; i++) {
