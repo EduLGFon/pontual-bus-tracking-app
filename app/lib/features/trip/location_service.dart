@@ -196,8 +196,10 @@ class LocationService {
     required SamplingMode mode,
     required String lineLabel,
   }) {
-    // ignore: close_sinks - owned by this service, closed in onCancel.
-    final StreamController<TripFix> controller = StreamController<TripFix>();
+    // ignore: close_sinks - owned by this service, closed in stop().
+    final StreamController<TripFix> controller =
+        StreamController<TripFix>.broadcast();
+    _controller = controller;
     void listen(SamplingMode m) {
       _sub?.cancel();
       _sub = _positionStream(settingsFor(m, lineLabel)).listen((Position p) {
@@ -258,4 +260,22 @@ class LocationService {
   /// Current sequence for tests.
   @visibleForTesting
   int get debugSeq => _seq;
+
+  StreamController<TripFix>? _controller;
+
+  /// Stops the position stream and closes the fix stream. Fire and
+  /// forget by design: awaiting cancellations can stall test zones, and
+  /// nothing after a stop needs their results.
+  void stop() {
+    final StreamSubscription<Position>? sub = _sub;
+    _sub = null;
+    if (sub != null) {
+      unawaited(sub.cancel());
+    }
+    final StreamController<TripFix>? c = _controller;
+    _controller = null;
+    if (c != null && !c.isClosed) {
+      unawaited(c.close());
+    }
+  }
 }

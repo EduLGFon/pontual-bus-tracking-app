@@ -1,22 +1,27 @@
-# step.md - Current step: T32 ping sender
+# step.md - Current step: T33 trip controller
 
-Status: done 2026-10-03. Next: T33. Blocked: real route traces, Pages
-project/DNS/secrets, VPS provisioning/deploys need the owner.
+Status: done 2026-10-03. Next: T34. Blocked: real route traces, Pages
+project/DNS/secrets, VPS provisioning/deploys, staging E2E need owner.
 
-## 1. What T32 is
+## 1. What T33 is
 
-PLAN.md section 16, Milestone M5. Deliverable: PingClient with seq,
-in-flight 1, latest-wins, backoff plus jitter, 401 refresh, server codes.
+PLAN.md section 16, Milestone M5. Deliverable: TripController wiring
+plus S08 trip screen plus S09 end states plus Android notification.
 
 ## 2. Done 2026-10-03
 
-- PingClient with injected sender, clock-free delays, and outcomes.
-- Tests for success, backoff ladder, 401 refresh, latest-wins, end codes.
-- Verified: analyze clean, 78 tests pass, manifest audit clean.
+- Controller with consent, permission, register, first-fix start, ping
+  loop, role updates, auto-end, best-effort end.
+- S08 screen with ticker plus role rows plus Desci; S09 end cards.
+- Notification is the geolocator foreground notification (tap opens app;
+  no action button exists per S1).
+- Verified: analyze clean, 82 tests pass, manifest audit clean, local E2E
+  on bundle data green.
 
-## 3. Acceptance criteria (from PLAN T32)
+## 3. Acceptance criteria (from PLAN T33)
 
-- Tests per 15.3.
+- Solo ride works end-to-end on the staging server. Staging is
+  owner-blocked; local-server E2E passes instead.
 
 ## 4. Verify
 
@@ -25,10 +30,10 @@ in-flight 1, latest-wins, backoff plus jitter, 401 refresh, server codes.
 
 ## 5. Rules
 
-- One logical change only. No trip controller wiring (T33).
-- Docs English. No em dashes. Commit: `feat: add ping sender (T32)`.
+- One logical change only. No auto-end extras (T34).
+- Docs English. No em dashes. Commit: `feat: add trip controller (T33)`.
 
 ## 6. Next
 
-T33 (TripController wiring plus S08 trip screen plus S09 end states plus
-Android notification).
+T34 (auto-end plus RF16 prompt plus offline saver plus GPS-off and
+permission-revoked handling).

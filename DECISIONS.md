@@ -358,6 +358,14 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T33 done. TripController owning the full consent to end
+  lifecycle with first-fix start, ping loop, role updates, auto-end, and
+  best-effort end, plus the S08 trip screen with visible-only ticker and
+  S09 end cards. Fixes from testing: broadcast fix stream for the
+  start-to-loop handoff, fire-and-forget stops for test zones, and
+  pump-flushed starts in widget tests. Staging E2E stays owner-blocked;
+  the same calls verified live against the local server on bundle data.
+  Local verify: analyze clean, 82 client tests pass, manifest audit clean.
 - 2026-10-03: T32 done. Ping sender with one request in flight,
   latest-wins coalescing, 5 to 60 s jittered backoff with retry of the
   latest fix, single 401 refresh plus retry, and typed server outcomes
