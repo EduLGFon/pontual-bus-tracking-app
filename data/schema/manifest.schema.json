@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pontual.local/schemas/manifest.schema.json",
+  "title": "Pontual built data manifest",
+  "type": "object",
+  "required": ["data_version", "lines", "routes", "generated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "data_version": { "type": "string", "minLength": 1 },
+    "lines": { "type": "string", "pattern": "^lines\\.[0-9a-f]{12}\\.json$" },
+    "routes": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^routes/[a-z0-9-]+\\.[0-9a-f]{12}\\.json$" }
+    },
+    "generated_at": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,64 @@
+// Data tool tests: schema-driven structure plus semantic rules.
+import { assert, assertEquals, assertThrows } from "@std/assert";
+import { checkSemantics, checkStructure } from "./main.ts";
+
+const SCHEMA = {
+  required: ["schema", "id", "code"],
+  additionalProperties: false,
+  properties: {
+    schema: { type: "integer", const: 1 },
+    id: { type: "integer", minimum: 1 },
+    code: { type: "string", pattern: "^[a-z0-9-]{2,40}$" },
+  },
+};
+
+Deno.test("structure rejects missing and unknown keys", () => {
+  assertThrows(
+    () => checkStructure("x.json", SCHEMA, { schema: 1, id: 1 }),
+    Error,
+    "missing",
+  );
+  assertThrows(
+    () =>
+      checkStructure("x.json", SCHEMA, {
+        schema: 1,
+        id: 1,
+        code: "a1",
+        bogus: 2,
+      }),
+    Error,
+    "unknown key",
+  );
+  checkStructure("x.json", SCHEMA, { schema: 1, id: 1, code: "a1" });
+});
+
+Deno.test("semantics rejects duplicates and unsorted times", () => {
+  const line = (id: number, code: string, times: string[]) => ({
+    path: `${code}.json`,
+    bytes: 10,
+    data: {
+      id,
+      code,
+      short: code.slice(0, 2),
+      schedules: [{ day_type: "weekday", origin: "A", times }],
+    },
+  });
+  assertThrows(
+    () => checkSemantics([line(1, "a1", ["05:30"]), line(1, "a2", ["05:30"])]),
+    Error,
+    "duplicate id",
+  );
+  assertThrows(
+    () => checkSemantics([line(1, "a1", ["06:10", "05:30"])]),
+    Error,
+    "unsorted",
+  );
+  assertThrows(
+    () => checkSemantics([line(1, "a1", ["25:00"])]),
+    Error,
+    "bad time",
+  );
+  checkSemantics([line(1, "a1", ["05:30", "06:10"])]);
+  assertEquals(typeof checkSemantics, "function");
+  assert(true);
+});

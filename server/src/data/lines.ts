@@ -16,9 +16,32 @@ export function registryResolver(lines: LineRecord[]): LineResolver {
   return (id: number) => byId.get(id) ?? null;
 }
 
-/** File loader stub. Reads DATA_DIR when T14 lands; empty until then. */
-export function loadLinesFromDir(
-  _dataDir: string,
-): Promise<LineRecord[]> {
-  return Promise.resolve([]);
+/**
+ * Load the built bundle from DATA_DIR (manifest plus lines file).
+ * Returns an empty list when the bundle is absent; the T14 builder creates
+ * it and T17 adds route geometry. Throws on corrupt bundles.
+ */
+export async function loadLinesFromDir(dataDir: string): Promise<LineRecord[]> {
+  let manifestText: string;
+  try {
+    manifestText = await Deno.readTextFile(`${dataDir}/manifest.json`);
+  } catch {
+    return [];
+  }
+  const manifest = JSON.parse(manifestText) as { lines?: unknown };
+  if (typeof manifest.lines !== "string" || manifest.lines.includes("..")) {
+    throw new Error("bad bundle manifest");
+  }
+  const linesText = await Deno.readTextFile(`${dataDir}/${manifest.lines}`);
+  const lines = JSON.parse(linesText) as {
+    id?: unknown;
+    is_active?: unknown;
+    pilot?: unknown;
+  }[];
+  if (!Array.isArray(lines)) throw new Error("bad bundle lines");
+  return lines.map((l) => ({
+    id: Number(l.id),
+    isActive: l.is_active === true,
+    route: null,
+  }));
 }

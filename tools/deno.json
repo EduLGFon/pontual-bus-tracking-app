@@ -1,6 +1,13 @@
 {
   "tasks": {
-    "sim": "deno run --allow-net=127.0.0.1,localhost --allow-env=SIM_BASE,SIM_LINE,SIM_BUSES,SIM_RIDERS,SIM_DURATION_S,SIM_PING_S,SIM_SEED,SIM_ABUSE tools/sim/main.ts"
+    "sim": "deno run --allow-net=127.0.0.1,localhost sim/main.ts",
+    "data-validate": "deno run --allow-read=../data data/main.ts validate",
+    "data-build": "deno run --allow-read=../data --allow-write=../build data/main.ts build",
+    "data-test": "deno test --allow-read=../data data/main_test.ts",
+    "fmt": "deno fmt --check",
+    "lint": "deno lint"
   },
-  "imports": {}
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1"
+  }
 }

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pontual.local/schemas/config.schema.json",
+  "title": "Pontual remote flags",
+  "type": "object",
+  "required": ["min_app_version", "maintenance", "message_pt", "consent_version", "tile_url"],
+  "additionalProperties": false,
+  "properties": {
+    "min_app_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "maintenance": { "type": "boolean" },
+    "message_pt": { "type": "string" },
+    "consent_version": { "type": "integer", "minimum": 1 },
+    "tile_url": { "type": "string", "format": "uri" }
+  }
+}

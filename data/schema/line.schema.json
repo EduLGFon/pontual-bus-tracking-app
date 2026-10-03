@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pontual.local/schemas/line.schema.json",
+  "title": "Pontual line file (source of truth, one file per line)",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "code",
+    "short",
+    "name",
+    "terminals",
+    "area_tags",
+    "is_active",
+    "pilot",
+    "schedules",
+    "source_ids",
+    "verified_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "type": "integer", "const": 1 },
+    "id": { "type": "integer", "minimum": 1, "maximum": 32767 },
+    "code": { "type": "string", "pattern": "^[a-z0-9-]{2,40}$" },
+    "short": { "type": "string", "minLength": 1, "maxLength": 3 },
+    "name": { "type": "string", "minLength": 1 },
+    "terminals": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "area_tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "is_active": { "type": "boolean" },
+    "pilot": { "type": "boolean" },
+    "schedules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["day_type", "origin", "times"],
+        "additionalProperties": false,
+        "properties": {
+          "day_type": { "type": "string", "enum": ["weekday", "saturday", "sunday_holiday"] },
+          "origin": { "type": "string", "minLength": 1 },
+          "times": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+          }
+        }
+      }
+    },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z0-9-]{2,40}$" }
+    },
+    "verified_at": { "type": ["string", "null"], "format": "date" }
+  }
+}

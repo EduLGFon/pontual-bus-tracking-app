@@ -311,6 +311,15 @@ PLAN.md 0.3).
   smoke. Local verify: 90 s and 45 s runs with hand-overs observed,
   snapshots flowing, p50 latency 4 to 7 ms, no errors. The full 30-min run
   and 8-hour soak land in T46.
+- 2026-10-03: T14 done. Static data pipeline: JSON Schemas for line,
+  manifest, and config files; a Deno validator plus builder driven by the
+  schema files with semantic checks (unique ids, codes, shorts; sorted
+  unique HH:MM times; 100 KB budget) and content-hashed immutable outputs
+  plus manifest plus config plus server bundle. The server loads the bundle
+  from DATA_DIR with LINES_JSON as fallback. data/sources.md stubbed for
+  T15. CI has a data job with fmt, lint, tool tests, validation, build,
+  and a size-budget gate. Local verify: tool tests pass, empty set builds,
+  bundle-backed endpoints serve live.
 - 2026-10-02: T12 done. Public reads plus stream: GET
   /v1/lines/{id}/vehicles with ETag, 304, and 5 s edge cache headers; GET
   /v1/live with 10 s headers; read-only hub with per-IP and global caps,

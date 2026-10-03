@@ -1,7 +1,7 @@
 // Bootstrap: config, HTTP server, internal metrics listener, shutdown.
 // See PLAN.md 6.2, 6.9, 6.10.
 import { loadConfig } from "./config/config.ts";
-import { registryResolver } from "./data/lines.ts";
+import { loadLinesFromDir, registryResolver } from "./data/lines.ts";
 import { openDb } from "./db/client.ts";
 import { defaultEngineConfig } from "./domain/types.ts";
 import { buildApp } from "./http/app.ts";
@@ -34,14 +34,17 @@ const config = loadConfig(readEnv());
 setLogLevel(config.logLevel);
 
 const sql = openDb(config.databaseUrl);
-// Line registry: local-dev seed via LINES_JSON until the T14 bundle lands.
-const lines = registryResolver(
-  config.linesJson.map((l) => ({
-    id: l.id,
-    isActive: l.isActive,
-    route: null,
-  })),
-);
+// Line registry: built bundle first, LINES_JSON local seed as fallback.
+const bundled = await loadLinesFromDir(config.dataDir);
+const seed = config.linesJson.map((l) => ({
+  id: l.id,
+  isActive: l.isActive,
+  route: null,
+}));
+const lines = registryResolver([
+  ...bundled,
+  ...seed.filter((s) => !bundled.some((b) => b.id === s.id)),
+]);
 const store = createStore();
 const hub = new Hub();
 const engine = defaultEngineConfig();
