@@ -358,6 +358,11 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T22 done. Offline-first static data repository: bundled
+  assets ship in the app, cache is read before any network, manifest
+  revalidates at most daily, and versioned writes swap atomically with the
+  manifest pointer last. Local verify: analyze clean, 27 tests pass,
+  manifest audit clean.
 - 2026-10-03: T21 done. Typed API wrappers with DTOs and error mapping for
   every endpoint, fake mapping tests plus a live contract test against the
   local server. The live run caught a real client bug: DELETE requests fell

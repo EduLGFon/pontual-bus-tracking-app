@@ -1,0 +1,208 @@
+// Static data repository: bundled data first, then cache, then conditional
+// GET, with atomic swap. The first frame never waits on the network.
+// Every line list the UI shows comes from here. See PLAN.md 7.1.
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:pontual/core/errors/failures.dart';
+import 'package:pontual/data/net/http_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Storage key prefix for versioned cached line bundles.
+const String linesKeyPrefix = 'static_lines_';
+
+/// Storage key for the cached manifest.
+const String manifestKey = 'static_manifest';
+
+/// Storage key for the cached manifest ETag.
+const String manifestEtagKey = 'static_manifest_etag';
+
+/// Storage key for the last remote check timestamp.
+const String lastCheckKey = 'static_last_check_ms';
+
+/// Minimum interval between remote manifest checks.
+const Duration checkInterval = Duration(hours: 24);
+
+/// One transit line with its timetables.
+class StaticLine {
+  /// Creates a line from decoded JSON.
+  const StaticLine({
+    required this.id,
+    required this.code,
+    required this.short,
+    required this.name,
+    required this.pilot,
+    required this.schedules,
+  });
+
+  /// Stable numeric id.
+  final int id;
+
+  /// Immutable slug.
+  final String code;
+
+  /// Badge text of up to 3 chars.
+  final String short;
+
+  /// Display name in pt-BR.
+  final String name;
+
+  /// Whether live tracking is enabled.
+  final bool pilot;
+
+  /// Raw schedule entries.
+  final List<Map<String, dynamic>> schedules;
+
+  /// Parses a line object. Throws [FormatException] on bad shapes.
+  factory StaticLine.fromJson(Map<String, dynamic> json) {
+    return StaticLine(
+      id: json['id'] as int,
+      code: json['code'] as String,
+      short: json['short'] as String,
+      name: json['name'] as String,
+      pilot: json['pilot'] as bool,
+      schedules: ((json['schedules'] as List<dynamic>?) ?? <dynamic>[])
+          .map(
+            (dynamic e) => (e as Map<dynamic, dynamic>).cast<String, dynamic>(),
+          )
+          .toList(),
+    );
+  }
+}
+
+/// Repository for lines and timetables with offline-first semantics.
+class StaticDataRepository {
+  /// Creates a repository. No network calls happen until [refresh].
+  const StaticDataRepository({
+    required this.client,
+    required this.staticBaseUrl,
+    required this.bundleManifestJson,
+    required this.bundleLinesJson,
+    required this.prefs,
+    required this.nowMs,
+  });
+
+  /// Shared HTTP client.
+  final http.Client client;
+
+  /// Static host base URL provider.
+  final String Function() staticBaseUrl;
+
+  /// Bundled manifest JSON from assets.
+  final String bundleManifestJson;
+
+  /// Bundled lines JSON from assets.
+  final String bundleLinesJson;
+
+  /// Preferences accessor.
+  final Future<SharedPreferences> Function() prefs;
+
+  /// Clock in milliseconds.
+  final int Function() nowMs;
+
+  /// Returns lines immediately: cache first, bundled fallback. Never throws;
+  /// corrupt cache falls back to the bundle.
+  Future<List<StaticLine>> lines() async {
+    final SharedPreferences sp = await prefs();
+    final String? manifestStr = sp.getString(manifestKey);
+    if (manifestStr != null) {
+      try {
+        final Map<String, dynamic> manifest =
+            jsonDecode(manifestStr) as Map<String, dynamic>;
+        final String version = manifest['data_version'] as String;
+        final String? linesStr = sp.getString('$linesKeyPrefix$version');
+        if (linesStr != null) {
+          return _parseLines(linesStr);
+        }
+      } catch (_) {
+        // Fall through to the bundle.
+      }
+    }
+    return _parseLines(bundleLinesJson);
+  }
+
+  /// Checks the remote manifest at most once per day and atomically swaps
+  /// in a newer bundle. Corrupt or unreachable remotes keep the old data.
+  Future<Result<bool>> refresh() async {
+    final SharedPreferences sp = await prefs();
+    final int last = sp.getInt(lastCheckKey) ?? 0;
+    if (nowMs() - last < checkInterval.inMilliseconds) {
+      return const Ok<bool>(false);
+    }
+    await sp.setInt(lastCheckKey, nowMs());
+    try {
+      final String? etag = sp.getString(manifestEtagKey);
+      final Map<String, String> headers = <String, String>{};
+      if (etag != null) {
+        headers['if-none-match'] = etag;
+      }
+      final http.Response res = await client
+          .get(Uri.parse('${staticBaseUrl()}/manifest.json'), headers: headers)
+          .timeout(requestTimeout);
+      if (res.statusCode == 304) {
+        return const Ok<bool>(false);
+      }
+      if (res.statusCode != 200) {
+        return const Err<bool>(
+          ServerFailure('manifest fetch failed', 'static'),
+        );
+      }
+      final Map<String, dynamic> remote =
+          jsonDecode(res.body) as Map<String, dynamic>;
+      final String version = remote['data_version'] as String;
+      final String linesName = remote['lines'] as String;
+      final String current = _versionOf(sp);
+      if (version == current) {
+        return const Ok<bool>(false);
+      }
+      final http.Response linesRes = await client
+          .get(Uri.parse('${staticBaseUrl()}/$linesName'))
+          .timeout(requestTimeout);
+      if (linesRes.statusCode != 200) {
+        return const Err<bool>(ServerFailure('lines fetch failed', 'static'));
+      }
+      final List<StaticLine> parsed = _parseLines(linesRes.body);
+      if (parsed.isEmpty) {
+        return const Err<bool>(ServerFailure('empty bundle', 'static'));
+      }
+      // Atomic swap: versioned lines first, manifest pointer last.
+      await sp.setString('$linesKeyPrefix$version', linesRes.body);
+      await sp.setString(manifestKey, res.body);
+      final String? newEtag = res.headers['etag'];
+      if (newEtag != null) {
+        await sp.setString(manifestEtagKey, newEtag);
+      }
+      return const Ok<bool>(true);
+    } on FormatException {
+      return const Err<bool>(ServerFailure('corrupt bundle', 'static'));
+    } catch (_) {
+      return const Err<bool>(NetworkFailure('static refresh failed'));
+    }
+  }
+
+  String _versionOf(SharedPreferences prefs) {
+    final String? manifestStr = prefs.getString(manifestKey);
+    if (manifestStr == null) {
+      try {
+        final Map<String, dynamic> bundle =
+            jsonDecode(bundleManifestJson) as Map<String, dynamic>;
+        return bundle['data_version'] as String? ?? '';
+      } catch (_) {
+        return '';
+      }
+    }
+    try {
+      return (jsonDecode(manifestStr) as Map<String, dynamic>)['data_version']
+          as String;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  List<StaticLine> _parseLines(String text) {
+    final List<dynamic> raw = jsonDecode(text) as List<dynamic>;
+    return raw
+        .map((dynamic e) => StaticLine.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+}
