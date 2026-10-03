@@ -529,6 +529,36 @@ PLAN.md 0.3).
   widget runs plus the shipping web build stay the verify path there.
   Viewer code itself is platform-clean (one conditional import, no
   dart:io in features).
+- 2026-10-03: T39 done. One-time iOS install hint: pure
+  `shouldShowInstallHint` (iOS web and unseen only), prefs-backed
+  `InstallHintStore`, dismissible Safari share-sheet card slotted at
+  the top of Home (no-op off iOS web). Verified: 4 new tests green,
+  existing home tests green, analyze clean. Real Safari PWA check
+  stays on a phone (owner todo, T47).
+- 2026-10-03: T40 done. S10 Settings (theme Sistema/Claro/Escuro
+  with prefs persistence via `themeModeProvider`, privacy and about
+  entries, help texts, timetable build date from the manifest) plus
+  S12 About (non-affiliation disclaimer, onibus.online source line,
+  OSM copyright link, licence page, repo link). Contact row hidden
+  while `supportEmail` is empty (INFRA-23 still owner-blocked).
+  Riverpod 3 note: `StateProvider` no longer exists, theme uses a
+  tiny `ThemeModeNotifier`. Verified: full suite green (124 passed),
+  analyze clean, manifest audit PASS.
+- 2026-10-03: T41 done. S11 privacy center: bundled short
+  policy/terms (offline), 6-line collection summary per 13.2,
+  `PrivacyActions` (delete-my-data with honest offline outcome,
+  revoke with best-effort trip end), policy/terms text routes,
+  contact hidden until INFRA-23. Support code cut per the cut
+  order. Verified: AC13 end-to-end in-widget (confirm clears token
+  and returns to welcome; cancel and offline keep data), full suite
+  green (131 passed), analyze clean.
+- 2026-10-03: T42 done (docs only, no code besides the bundled-text
+  pointer). `docs/privacy/policy.md` and `terms.md` drafts (pt-BR,
+  per 13.9, with [DEFINIR] markers for controller, contact,
+  domains, licences), `ripd.md` (RIPD-lite with KL2 residual risk),
+  `inventory.md` (processing records from 13.2). Owner-blocked:
+  lawyer review, contact e-mail (INFRA-23), licences (INFRA-19
+  data half), canonical URLs (INFRA-05).
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
