@@ -586,6 +586,10 @@ PLAN.md 0.3).
   manifest audit, AAB <= 15 MB gate, `gh release upload`, no new
   third-party action). Owner-blocked: upload keystore secrets,
   first tagged build plus install-launch, merged-manifest result.
+- 2026-10-03: T49 done (docs only). `docs/field-tests/pilot-kit.md`
+  with the 1-page pt-BR guide, known-limitations summary, and a
+  copy-paste feedback form. Organizer contact still [DEFINIR]
+  (INFRA-23).
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
