@@ -100,4 +100,20 @@ class StringsPt {
 
   /// Placeholder body for screens built in later tasks.
   static const String placeholderBody = 'Em construção.';
+
+  /// Web trip banner: keep the page open and unlocked.
+  static const String webKeepOpen =
+      'Mantenha esta tela aberta e o celular desbloqueado.';
+
+  /// Web trip note about battery: the screen stays on.
+  static const String webWakeNote =
+      'A tela fica ligada durante a viagem. Baixe o brilho para economizar bateria.';
+
+  /// Shown when the browser cannot hold a wake lock.
+  static const String webWakeUnsupported =
+      'Este navegador não mantém a tela ligada. Deixe o brilho no máximo e não troque de aba.';
+
+  /// Shown while a web trip is paused for a hidden page.
+  static const String webHiddenPaused =
+      'Tela oculta: compartilhamento pausado. Volte para esta aba para continuar.';
 }

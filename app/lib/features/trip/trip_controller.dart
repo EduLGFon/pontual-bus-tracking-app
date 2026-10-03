@@ -110,6 +110,22 @@ class TripController extends ChangeNotifier {
   SamplingMode _samplingMode = SamplingMode.waiting;
   bool _checking = false;
 
+  /// True while the web page is hidden (foreground-only sharing).
+  /// Fixes are dropped while hidden; the server timeout ends the trip
+  /// if the page stays hidden. See PLAN.md 8.12.
+  bool get isWebHidden => _webHidden;
+  bool _webHidden = false;
+
+  /// Marks the web page hidden or visible. Notifies listeners so the
+  /// banner updates. No-op on repeated values.
+  void setWebHidden(bool hidden) {
+    if (_webHidden == hidden || _disposed) {
+      return;
+    }
+    _webHidden = hidden;
+    notifyListeners();
+  }
+
   /// True while the RF16 walking prompt should be on screen.
   bool get walkingPromptVisible => _supervisor?.promptVisible ?? false;
 
@@ -244,6 +260,9 @@ class TripController extends ChangeNotifier {
       delay: (Duration d) => Future<void>.delayed(d),
     );
     _fixSub = stream.listen((TripFix fix) {
+      if (_webHidden) {
+        return;
+      }
       _onFix(fix);
       _ping?.queue(_fixBody(fix), (PingOutcome o) => _onOutcome(token, o));
     });
@@ -461,6 +480,7 @@ class TripController extends ChangeNotifier {
     _autoEndTimer?.cancel();
     _autoEndTimer = null;
     _activeToken = null;
+    _webHidden = false;
     _supervisor?.reset();
     _supervisor = null;
     final StreamSubscription<TripFix>? sub = _fixSub;

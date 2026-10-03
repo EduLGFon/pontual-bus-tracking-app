@@ -3,11 +3,15 @@
 // See PLAN.md S08 and S09.
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/domain/trip/trip_state.dart';
 import 'package:pontual/features/trip/trip_controller.dart';
+import 'package:pontual/platform/web/visibility.dart';
+import 'package:pontual/platform/web/wake_lock.dart';
+import 'package:pontual/platform/web/web_banner.dart';
 
 /// Active trip screen.
 class TripScreen extends StatefulWidget {
@@ -21,9 +25,16 @@ class TripScreen extends StatefulWidget {
   State<TripScreen> createState() => _TripScreenState();
 }
 
-class _TripScreenState extends State<TripScreen> {
+class _TripScreenState extends State<TripScreen> with WidgetsBindingObserver {
   Timer? _ticker;
+  Timer? _visibilityTimer;
   bool _promptOpen = false;
+  bool _wakeUnsupported = false;
+  final WebVisibilityTracker _visibility = WebVisibilityTracker();
+
+  /// Wake lock holder; replaced in tests. (Web only.)
+  @visibleForTesting
+  WebWakeLock wakeLock = const ProdWebWakeLock();
 
   @override
   void initState() {
@@ -35,10 +46,50 @@ class _TripScreenState extends State<TripScreen> {
         setState(() {});
       }
     });
+    if (kIsWeb) {
+      WidgetsBinding.instance.addObserver(this);
+      unawaited(_holdWakeLock());
+      _visibilityTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        _visibility.check(DateTime.now().millisecondsSinceEpoch);
+        if (_visibility.paused && !widget.controller.isWebHidden) {
+          widget.controller.setWebHidden(true);
+        }
+      });
+    }
+  }
+
+  Future<void> _holdWakeLock() async {
+    await wakeLock.enable();
+    final bool held = await wakeLock.enabled;
+    if (mounted && !held) {
+      setState(() {
+        _wakeUnsupported = true;
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!kIsWeb) {
+      return;
+    }
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _visibility.onHidden(DateTime.now().millisecondsSinceEpoch);
+    } else if (state == AppLifecycleState.resumed) {
+      _visibility.onVisible();
+      widget.controller.setWebHidden(false);
+    }
   }
 
   @override
   void dispose() {
+    if (kIsWeb) {
+      WidgetsBinding.instance.removeObserver(this);
+      _visibilityTimer?.cancel();
+      unawaited(wakeLock.disable());
+    }
     _ticker?.cancel();
     widget.controller.removeListener(_refresh);
     widget.controller.removeListener(_maybePrompt);
@@ -109,6 +160,12 @@ class _TripScreenState extends State<TripScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
+          if (kIsWeb)
+            WebTripBanner(
+              paused: c.isWebHidden,
+              wakeUnsupported: _wakeUnsupported,
+            ),
+          if (kIsWeb) const SizedBox(height: 12),
           Semantics(
             label: 'Compartilhando',
             liveRegion: true,

@@ -529,6 +529,21 @@ PLAN.md 0.3).
   widget runs plus the shipping web build stay the verify path there.
   Viewer code itself is platform-clean (one conditional import, no
   dart:io in features).
+- 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
+  1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
+  no permissions, source audit still PASS) behind a `WebWakeLock` seam
+  in `platform/web/` with a fake for tests; pure `WebVisibilityTracker`
+  pauses sends after 60 s hidden (`webHiddenPauseMs`) and resumes on
+  visible; TripController drops fixes while `isWebHidden` (server
+  10-min timeout is the backstop, no explicit end needed); trip screen
+  shows the always-visible PLAN banner plus brightness tip, wake-lock
+  status, and hidden-paused state on web only (`kIsWeb`). Size note:
+  release web build compiles; JS path 2.95 MB gz (inside budget), wasm
+  path 3.08 MB gz (about 3 percent over the 3 MB RNF14 target;
+  canvaskit.wasm 2.06 MB gz dominates, nearest achievable without a
+  renderer change; iOS browsers take the JS path). Full client suite
+  green (116 passed, 9 new), analyze clean. Browser run of the banner
+  and wake lock stays on the T37 machine (owner todo).
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
