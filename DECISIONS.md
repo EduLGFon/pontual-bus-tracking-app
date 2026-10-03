@@ -358,6 +358,12 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T31 done. Location service with geolocator stream modes,
+  foreground notification config, mock plus accuracy plus bbox plus stale
+  filters, send-format rounding, and hysteresis, plus the geolocator
+  permission gateway and the allow-listed manifest permissions. S1
+  device criteria stay VERIFY for the T47 field test. Local verify:
+  analyze clean, 73 client tests pass, manifest audit clean.
 - 2026-10-03: T30 done. Consent sheet with the S06 copy, permission
   education plus denied plus blocked plus services-off sheets with a
   gateway interface for the T31 geolocator wiring, local consent

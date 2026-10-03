@@ -1,22 +1,24 @@
-# step.md - Current step: T30 consent flows
+# step.md - Current step: T31 location service
 
-Status: done 2026-10-03. Next: T31. Blocked: real route traces, Pages
+Status: done 2026-10-03. Next: T32. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T30 is
+## 1. What T31 is
 
-PLAN.md section 16, Milestone M5. Deliverable: S06 consent plus S07
-permission flows plus consent versioning (local plus POST /v1/consents).
+PLAN.md section 16, Milestone M5. Deliverable: LocationService with
+geolocator stream, foreground service, notification, filters, mode
+switching with hysteresis.
 
 ## 2. Done 2026-10-03
 
-- ConsentSheet, permission sheets, PermissionGateway interface,
-  ConsentStore, offline-tolerant ensureConsent flow.
-- Verified: analyze clean, 69 tests pass, manifest audit clean.
+- Pure acceptFix filter, rounding, per-mode settings, gateway.
+- Manifest permissions per PLAN 8.6 with no forbidden entries.
+- Verified: analyze clean, 73 tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T30)
+## 3. Acceptance criteria (from PLAN T31)
 
-- Cannot start a trip without consent; denied/permanent-denied states.
+- S1 criteria in real device; manifest audit passes. Device half stays
+  VERIFY for T47; audit passes here.
 
 ## 4. Verify
 
@@ -25,10 +27,10 @@ permission flows plus consent versioning (local plus POST /v1/consents).
 
 ## 5. Rules
 
-- One logical change only. No location service (T31).
-- Docs English. No em dashes. Commit: `feat: add consent flows (T30)`.
+- One logical change only. No ping client (T32).
+- Docs English. No em dashes. Commit: `feat: add location service (T31)`.
 
 ## 6. Next
 
-T31 (LocationService: geolocator stream, foreground service,
-notification, filters, mode switching with hysteresis).
+T32 (PingClient: seq, in-flight 1, latest-wins, backoff plus jitter, 401
+refresh, server codes).

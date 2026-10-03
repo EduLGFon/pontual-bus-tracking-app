@@ -34,4 +34,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T28 map tab done (status states plus markers plus list rows plus recenter plus polyline).
 - T29 trip domain done (state machine plus sampling policy plus auto-end, all transitions covered).
 - T30 consent done (S06 sheet plus S07 sheets plus versioning plus offline-tolerant flow).
+- T31 location done (geolocator stream plus FGS notification plus filters plus manifest permissions).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
