@@ -1,20 +1,21 @@
-# step.md - Current step: T10 trip endpoints
+# step.md - Current step: T11 background jobs
 
-Status: done 2026-10-02. Next: T11. T04 and T05 blocked on owner infra answers.
+Status: done 2026-10-02. Next: T12. T04 and T05 blocked on owner infra answers.
 
-## 1. What T10 is
+## 1. What T11 is
 
-PLAN.md section 16, Milestone M1. Deliverable: trip endpoints (POST /v1/trip, /v1/trip/ping, DELETE /v1/trip) wired to the engine with quotas, capacity, resume, kill switch.
+PLAN.md section 16, Milestone M1. Deliverable: tick job and background jobs (tick, config refresh, device purge, db health) with overlap guard.
 
 ## 2. Done 2026-10-02
 
-- Trip schemas plus routes plus line resolver stub.
-- Tests for AC02, AC07, AC09, AC10, AC14.
-- Verified: 46 tests pass, fmt/lint/check clean, live flow via curl.
+- Jobs module with guarded tick, refresh, purge, health probe, shutdown stop.
+- Wired into main.ts with 5 s, 30 s, daily 03:30 Sao Paulo, 10 s schedules.
+- Tests including restart semantics (test 19).
+- Verified: 52 tests pass, fmt/lint/check clean.
 
-## 3. Acceptance criteria (from PLAN T10)
+## 3. Acceptance criteria (from PLAN T11)
 
-- AC02, AC07, AC09, AC10, AC14 pass.
+- Test 19 and tick behaviour tests pass.
 
 ## 4. Verify
 
@@ -23,9 +24,9 @@ PLAN.md section 16, Milestone M1. Deliverable: trip endpoints (POST /v1/trip, /v
 
 ## 5. Rules
 
-- One logical change only. No tick jobs (T11) or read endpoints (T12).
-- Docs English. No em dashes. Commit: `feat: add trip endpoints (T10)`.
+- One logical change only. No read endpoints (T12) or simulator (T13).
+- Docs English. No em dashes. Commit: `feat: add background jobs (T11)`.
 
 ## 6. Next
 
-T11 (tick job and background jobs: tick, config refresh, device purge, db health, with overlap guard).
+T12 (read endpoints GET /v1/lines/{id}/vehicles with ETag and GET /v1/live, plus WebSocket hub with subscribe, caps, heartbeat, backpressure, bye, and edge-cache headers).

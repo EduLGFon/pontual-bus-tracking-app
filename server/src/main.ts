@@ -3,7 +3,9 @@
 import { loadConfig } from "./config/config.ts";
 import { registryResolver } from "./data/lines.ts";
 import { openDb } from "./db/client.ts";
+import { defaultEngineConfig } from "./domain/types.ts";
 import { buildApp } from "./http/app.ts";
+import { startJobs } from "./jobs/jobs.ts";
 import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
 import { createStore } from "./state/store.ts";
@@ -31,9 +33,10 @@ setLogLevel(config.logLevel);
 const sql = openDb(config.databaseUrl);
 // Line registry loads from the built bundle in T14; empty until then.
 const lines = registryResolver([]);
+const store = createStore();
 const app = buildApp({
   sql,
-  store: createStore(),
+  store,
   lines,
   followerJitterS: 10,
   trustCloudflare: config.trustCloudflare,
@@ -59,10 +62,32 @@ const metricsServer = Deno.serve(
 );
 
 function shutdown(): void {
+  jobs.stop();
   controller.abort();
   metricsController.abort();
   void sql.end();
 }
+
+const engine = defaultEngineConfig();
+const jobs = startJobs({
+  sql,
+  store,
+  engine,
+  events: [],
+  tickPeriodMs: engine.tickPeriodS * 1000,
+  configRefreshMs: 30 * 1000,
+  // Next 03:30 America/Sao_Paulo (fixed UTC-3, no DST since 2019).
+  purgeAtMs: (nowMs: number) => {
+    const sao = new Date(nowMs - 3 * 3600 * 1000);
+    const next = new Date(sao);
+    next.setUTCHours(3, 30, 0, 0);
+    if (next.getTime() <= sao.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+    return next.getTime() + 3 * 3600 * 1000;
+  },
+  dbHealthMs: 10 * 1000,
+  onTick: () => {},
+  onConfig: () => {},
+});
 
 Deno.addSignalListener("SIGTERM", shutdown);
 Deno.addSignalListener("SIGINT", shutdown);

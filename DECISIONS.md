@@ -300,6 +300,10 @@ PLAN.md 0.3).
   client auto-end work. Local verify: 46 tests pass covering AC02, AC07,
   AC09, AC10, AC14; live register plus consent plus start plus ping plus
   delete flow verified via curl.
+- 2026-10-02: T11 done. Background jobs with overlap-guarded tick, 30 s
+  config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
+  probe; all timers stop on shutdown. Engine test 19 passes: fresh store
+  answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
