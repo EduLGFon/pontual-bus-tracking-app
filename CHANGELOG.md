@@ -29,4 +29,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T23 remote flags done (config repository plus S13 screens plus S14 banner).
 - T24 home screen done (search plus cached list plus live dots, no spinners).
 - T25 timetables done (day types plus origin selector plus next departure plus disclaimer).
+- T26 map widget done (TileSource seam plus capped cache plus bounds plus attribution).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
