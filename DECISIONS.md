@@ -358,6 +358,13 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T27 done. Vehicle stream repository with snapshot-first
+  start, read-only socket, 45 s watchdog resync, 30 s polling fallback,
+  and clean background stop, all on an injectable clock and fake channel.
+  stream_channel added as an explicit test-only companion of the
+  allow-listed web_socket_channel (same Dart team, no permissions).
+  stop() now nulls cancelled timers so state reads clean. Local verify:
+  analyze clean, 51 client tests pass, manifest audit clean.
 - 2026-10-03: T26 done. Map widget with the OSM tile layer behind a
   TileSource seam, 50 MB cache cap, area bounds with zoom limits, and a
   tappable OSM attribution inside a RepaintBoundary. Unit tests avoid the

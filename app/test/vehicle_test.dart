@@ -1,0 +1,215 @@
+// T27 tests: snapshot, stream, watchdog, polling fallback, lifecycle.
+// Fake clock and fake channel keep everything deterministic.
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pontual/core/time/clock.dart';
+import 'package:pontual/data/realtime/vehicle_repository.dart';
+import 'package:stream_channel/stream_channel.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+class FakeSink implements WebSocketSink {
+  FakeSink(this.sent, this.doneCompleter);
+
+  final List<String> sent;
+  final Completer<void> doneCompleter;
+
+  @override
+  void add(dynamic data) => sent.add(data as String);
+
+  @override
+  Future<void> addStream(Stream<dynamic> stream) async {
+    await for (final dynamic d in stream) {
+      add(d);
+    }
+  }
+
+  @override
+  Future<void> close([int? code, String? reason]) async {
+    if (!doneCompleter.isCompleted) {
+      doneCompleter.complete();
+    }
+  }
+
+  @override
+  Future<void> get done => doneCompleter.future;
+
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) {}
+}
+
+class FakeChannel with StreamChannelMixin<dynamic> implements WebSocketChannel {
+  FakeChannel()
+    : incoming = StreamController<dynamic>(),
+      sent = <String>[],
+      doneCompleter = Completer<void>() {
+    sink = FakeSink(sent, doneCompleter);
+  }
+
+  final StreamController<dynamic> incoming;
+  final List<String> sent;
+  final Completer<void> doneCompleter;
+
+  @override
+  // ignore: close_sinks - test fake; closed through dispose() in each test.
+  late final FakeSink sink;
+
+  @override
+  Stream<dynamic> get stream => incoming.stream;
+
+  @override
+  int? get closeCode => null;
+
+  @override
+  String? get closeReason => null;
+
+  @override
+  String? get protocol => null;
+
+  @override
+  Future<void> get ready => Future<void>.value();
+
+  /// Closes the incoming stream. Called at the end of each test.
+  Future<void> dispose() async {
+    await sink.close();
+    await incoming.close();
+  }
+}
+
+VehicleRepository repo(
+  FakeClock clock,
+  FakeChannel channel, {
+  List<ClientVehicle> snapshot = const <ClientVehicle>[],
+}) {
+  return VehicleRepository(
+    fetchSnapshot: (_) async => snapshot,
+    openChannel: (_) async => channel,
+    wsBaseUrl: () => 'ws://127.0.0.1:8080',
+    clock: clock,
+    launch: (Future<void> task) => unawaited(task),
+  );
+}
+
+const ClientVehicle one = ClientVehicle(
+  id: 3,
+  lat: -18.72,
+  lng: -39.85,
+  heading: 90,
+  kmh: 29,
+  members: 1,
+  ageS: 4,
+);
+
+void main() {
+  test('snapshot first, then stream subscription', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    final VehicleRepository r = repo(
+      clock,
+      channel,
+      snapshot: <ClientVehicle>[one],
+    );
+    await r.start(7);
+    expect(r.vehicles.length, 1);
+    expect(r.status, StreamStatus.live);
+    expect(channel.sent.length, 1);
+    expect(channel.sent.first, contains('"op":"sub"'));
+    await r.stop();
+    expect(r.lineId, isNull);
+    await channel.dispose();
+  });
+
+  test('stream messages update vehicles and ignore heartbeats', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    final VehicleRepository r = repo(clock, channel);
+    await r.start(7);
+    expect(r.vehicles, isEmpty);
+    channel.incoming.add('{"hb":100}');
+    channel.incoming.add('{"bye":"restart"}');
+    await Future<void>.delayed(Duration.zero);
+    expect(r.vehicles, isEmpty);
+    channel.incoming.add('{"l":7,"t":100,"v":[[3,-18.72,-39.85,90,29,1,4]]}');
+    await Future<void>.delayed(Duration.zero);
+    expect(r.vehicles.length, 1);
+    expect(r.vehicles.first.id, 3);
+    await r.stop();
+    await channel.dispose();
+  });
+
+  test('watchdog resyncs after 45 s without messages', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    int fetches = 0;
+    final VehicleRepository r = VehicleRepository(
+      fetchSnapshot: (_) async {
+        fetches += 1;
+        return <ClientVehicle>[one];
+      },
+      openChannel: (_) async => channel,
+      wsBaseUrl: () => 'ws://127.0.0.1:8080',
+      clock: clock,
+      launch: (Future<void> task) => unawaited(task),
+    );
+    await r.start(7);
+    expect(fetches, 1);
+    clock.advance(46000);
+    r.debugWatchdogTick();
+    await Future<void>.delayed(Duration.zero);
+    expect(fetches, 2);
+    await r.stop();
+    await channel.dispose();
+  });
+
+  test('polling fallback arms after 30 s socket-down', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    final VehicleRepository r = repo(
+      clock,
+      channel,
+      snapshot: <ClientVehicle>[one],
+    );
+    await r.start(7);
+    expect(r.debugPolling, isFalse);
+    r.debugSocketDown();
+    clock.advance(31000);
+    r.debugWatchdogTick();
+    expect(r.debugPolling, isTrue);
+    await r.stop();
+    expect(r.debugPolling, isFalse);
+    await channel.dispose();
+  });
+
+  test('stop closes the socket and clears state', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    final VehicleRepository r = repo(
+      clock,
+      channel,
+      snapshot: <ClientVehicle>[one],
+    );
+    await r.start(7);
+    await r.stop();
+    await r.stop();
+    expect(channel.doneCompleter.isCompleted, isTrue);
+    expect(r.lineId, isNull);
+    await channel.dispose();
+  });
+
+  test('age maths mark stale snapshots', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    final VehicleRepository r = repo(
+      clock,
+      channel,
+      snapshot: <ClientVehicle>[one],
+    );
+    await r.start(7);
+    expect(r.status, StreamStatus.live);
+    clock.advance(46000);
+    r.evaluateAge();
+    expect(r.status, StreamStatus.stale);
+    await r.stop();
+    await channel.dispose();
+  });
+}

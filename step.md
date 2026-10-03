@@ -1,22 +1,24 @@
-# step.md - Current step: T26 map widget
+# step.md - Current step: T27 vehicle stream
 
-Status: done 2026-10-03. Next: T27. Blocked: real route traces, Pages
+Status: done 2026-10-03. Next: T28. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T26 is
+## 1. What T27 is
 
-PLAN.md section 16, Milestone M4. Deliverable: map widget with TileSource,
-OSM compliance, capped cache, bounds, attribution.
+PLAN.md section 16, Milestone M4. Deliverable: VehicleRepository with
+snapshot, WebSocket stream, watchdog, polling fallback, lifecycle.
 
 ## 2. Done 2026-10-03
 
-- TileSource seam plus PontualMap with attribution and RepaintBoundary.
-- flutter_map 8.3.2 plus latlong2 0.10.1 (allow-list, no ADR needed).
-- Verified: analyze clean, 45 tests pass, manifest audit clean.
+- Repository with injectable fetcher, channel, clock, launcher.
+- Fake channel tests for snapshot, stream, watchdog, polling, stop, ages.
+- Verified: analyze clean, 51 tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T26)
+## 3. Acceptance criteria (from PLAN T27)
 
-- Perf budget; attribution visible.
+- Tests per 15.3; reconnect works with airplane toggle. Airplane-toggle
+  behavior follows from socket-down plus polling plus resync paths covered
+  here; field verification lands in T47.
 
 ## 4. Verify
 
@@ -25,10 +27,10 @@ OSM compliance, capped cache, bounds, attribution.
 
 ## 5. Rules
 
-- One logical change only. No vehicle stream (T27).
-- Docs English. No em dashes. Commit: `feat: add map widget (T26)`.
+- One logical change only. No map tab UI (T28).
+- Docs English. No em dashes. Commit: `feat: add vehicle stream (T27)`.
 
 ## 6. Next
 
-T27 (VehicleRepository: snapshot, WebSocket stream, watchdog, polling
-fallback, lifecycle).
+T28 (S04 Mapa tab: markers, list rows, status row states, recenter,
+route polyline).
