@@ -358,6 +358,11 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T21 done. Typed API wrappers with DTOs and error mapping for
+  every endpoint, fake mapping tests plus a live contract test against the
+  local server. The live run caught a real client bug: DELETE requests fell
+  through to GET and are now sent correctly. Local verify: analyze clean,
+  21 tests pass with 1 live, manifest audit clean.
 - 2026-10-03: T20 done. Client networking base: keep-alive HTTP factory
   with a web-safe conditional import, env.dart for dart-define URLs, token
   store, and BusApi registration on demand (one per install, never at

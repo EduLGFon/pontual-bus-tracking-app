@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:pontual/core/errors/failures.dart';
+import 'package:pontual/data/api/dto.dart';
 import 'package:pontual/data/net/http_client.dart';
 
 /// Base URL provider, injectable for tests.
@@ -69,5 +70,227 @@ class BusApi {
     } on http.ClientException catch (e) {
       return Err<String>(NetworkFailure(e.message));
     }
+  }
+
+  /// Records consent for the current version.
+  Future<Result<bool>> postConsents(String token, int version) async {
+    final Result<Map<String, dynamic>> res = await _authed(
+      token,
+      'POST',
+      '/v1/consents',
+      <String, dynamic>{'version': version},
+    );
+    return res is Ok<Map<String, dynamic>>
+        ? const Ok<bool>(true)
+        : Err<bool>((res as Err<Map<String, dynamic>>).failure);
+  }
+
+  /// Starts a trip on [lineId] with the first fix.
+  Future<Result<TripInstruction>> startTrip(
+    String token, {
+    required int lineId,
+    required double lat,
+    required double lng,
+    required double accuracyM,
+    required int batteryPct,
+    required bool charging,
+    bool resume = false,
+  }) async {
+    final Result<Map<String, dynamic>> res = await _authed(
+      token,
+      'POST',
+      '/v1/trip',
+      <String, dynamic>{
+        'line': lineId,
+        'lat': lat,
+        'lng': lng,
+        'acc': accuracyM,
+        'bat': batteryPct,
+        'chg': charging,
+        'resume': resume,
+      },
+    );
+    return _instruction(res);
+  }
+
+  /// Sends one fix. [role] is the last known role for hand-over ack only.
+  Future<Result<TripInstruction>> pingTrip(
+    String token, {
+    required int seq,
+    required double lat,
+    required double lng,
+    required double speedMps,
+    required double? heading,
+    required double accuracyM,
+    required int batteryPct,
+    required bool charging,
+    required String role,
+  }) async {
+    final Result<Map<String, dynamic>> res = await _authed(
+      token,
+      'POST',
+      '/v1/trip/ping',
+      <String, dynamic>{
+        'seq': seq,
+        'lat': lat,
+        'lng': lng,
+        'spd': speedMps,
+        'hdg': heading,
+        'acc': accuracyM,
+        'bat': batteryPct,
+        'chg': charging,
+        'role': role,
+      },
+    );
+    return _instruction(res);
+  }
+
+  /// Ends the active trip. Idempotent.
+  Future<Result<bool>> endTrip(String token) async {
+    final Result<void> res = await _authedVoid(token, 'DELETE', '/v1/trip');
+    return res is Ok<void>
+        ? const Ok<bool>(true)
+        : Err<bool>((res as Err<void>).failure);
+  }
+
+  /// Deletes the device and all its data. Ends the trip first server-side.
+  Future<Result<bool>> deleteMe(String token) async {
+    final Result<void> res = await _authedVoid(token, 'DELETE', '/v1/me');
+    return res is Ok<void>
+        ? const Ok<bool>(true)
+        : Err<bool>((res as Err<void>).failure);
+  }
+
+  /// Fetches the public vehicle snapshot for [lineId].
+  Future<Result<VehiclesSnapshot>> getVehicles(int lineId) async {
+    try {
+      final http.Response res = await client
+          .get(Uri.parse('${baseUrl()}/v1/lines/$lineId/vehicles'))
+          .timeout(requestTimeout);
+      if (res.statusCode != 200) {
+        return Err<VehiclesSnapshot>(_failure(res));
+      }
+      final Map<String, dynamic> body =
+          jsonDecode(res.body) as Map<String, dynamic>;
+      final List<dynamic> rows = body['v'] as List<dynamic>;
+      return Ok<VehiclesSnapshot>(
+        VehiclesSnapshot(
+          epochS: body['t'] as int,
+          vehicles: rows
+              .map((dynamic r) => (r as List<dynamic>).cast<num?>())
+              .toList(),
+        ),
+      );
+    } on TimeoutException {
+      return const Err<VehiclesSnapshot>(NetworkFailure('vehicles timed out'));
+    } on http.ClientException catch (e) {
+      return Err<VehiclesSnapshot>(NetworkFailure(e.message));
+    }
+  }
+
+  /// Fetches the live-lines indicator.
+  Future<Result<LiveLines>> getLive() async {
+    try {
+      final http.Response res = await client
+          .get(Uri.parse('${baseUrl()}/v1/live'))
+          .timeout(requestTimeout);
+      if (res.statusCode != 200) {
+        return Err<LiveLines>(_failure(res));
+      }
+      final List<dynamic> rows = jsonDecode(res.body) as List<dynamic>;
+      return Ok<LiveLines>(
+        LiveLines(
+          rows
+              .map(
+                (dynamic r) =>
+                    (r as List<dynamic>).map((dynamic n) => n as int).toList(),
+              )
+              .toList(),
+        ),
+      );
+    } on TimeoutException {
+      return const Err<LiveLines>(NetworkFailure('live timed out'));
+    } on http.ClientException catch (e) {
+      return Err<LiveLines>(NetworkFailure(e.message));
+    }
+  }
+
+  Result<TripInstruction> _instruction(Result<Map<String, dynamic>> res) {
+    if (res is Err<Map<String, dynamic>>) {
+      return Err<TripInstruction>(res.failure);
+    }
+    final Map<String, dynamic> body = (res as Ok<Map<String, dynamic>>).value;
+    return Ok<TripInstruction>(
+      TripInstruction(
+        role: body['r'] as String,
+        intervalS: body['n'] as int,
+        end: body['e'] as String?,
+      ),
+    );
+  }
+
+  Future<Result<Map<String, dynamic>>> _authed(
+    String token,
+    String method,
+    String path,
+    Map<String, dynamic>? body,
+  ) async {
+    try {
+      final Uri uri = Uri.parse('${baseUrl()}$path');
+      final Map<String, String> headers = <String, String>{
+        'content-type': 'application/json',
+        'authorization': 'Bearer $token',
+      };
+      final Future<http.Response> call;
+      if (method == 'POST') {
+        call = client.post(uri, headers: headers, body: jsonEncode(body));
+      } else if (method == 'DELETE') {
+        call = client.delete(uri, headers: headers);
+      } else {
+        call = client.get(uri, headers: headers);
+      }
+      final http.Response res = await call.timeout(requestTimeout);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        if (res.statusCode == 204 || res.body.isEmpty) {
+          return const Ok<Map<String, dynamic>>(<String, dynamic>{});
+        }
+        return Ok<Map<String, dynamic>>(
+          jsonDecode(res.body) as Map<String, dynamic>,
+        );
+      }
+      return Err<Map<String, dynamic>>(_failure(res));
+    } on TimeoutException {
+      return const Err<Map<String, dynamic>>(NetworkFailure('timed out'));
+    } on http.ClientException catch (e) {
+      return Err<Map<String, dynamic>>(NetworkFailure(e.message));
+    }
+  }
+
+  Future<Result<void>> _authedVoid(
+    String token,
+    String method,
+    String path,
+  ) async {
+    final Result<Map<String, dynamic>> res = await _authed(
+      token,
+      method,
+      path,
+      null,
+    );
+    return res is Ok<Map<String, dynamic>>
+        ? const Ok<void>(null)
+        : Err<void>((res as Err<Map<String, dynamic>>).failure);
+  }
+
+  ServerFailure _failure(http.Response res) {
+    String? code;
+    try {
+      final Map<String, dynamic> body =
+          jsonDecode(res.body) as Map<String, dynamic>;
+      code = body['e'] as String? ?? body['code'] as String?;
+    } catch (_) {
+      code = null;
+    }
+    return mapError(res.statusCode, code);
   }
 }
