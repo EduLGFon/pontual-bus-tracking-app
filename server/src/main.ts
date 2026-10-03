@@ -9,6 +9,8 @@ import { startJobs } from "./jobs/jobs.ts";
 import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
 import { createStore } from "./state/store.ts";
+import { lineSnapshot } from "./state/snapshots.ts";
+import { Hub } from "./ws/hub.ts";
 
 function readEnv(): Record<string, string | undefined> {
   const names = [
@@ -34,10 +36,13 @@ const sql = openDb(config.databaseUrl);
 // Line registry loads from the built bundle in T14; empty until then.
 const lines = registryResolver([]);
 const store = createStore();
+const hub = new Hub();
+const engine = defaultEngineConfig();
 const app = buildApp({
   sql,
   store,
   lines,
+  hub,
   followerJitterS: 10,
   trustCloudflare: config.trustCloudflare,
   allowedOrigins: config.allowedOrigins,
@@ -63,12 +68,13 @@ const metricsServer = Deno.serve(
 
 function shutdown(): void {
   jobs.stop();
+  clearInterval(heartbeat);
+  hub.closeAll();
   controller.abort();
   metricsController.abort();
   void sql.end();
 }
 
-const engine = defaultEngineConfig();
 const jobs = startJobs({
   sql,
   store,
@@ -85,9 +91,27 @@ const jobs = startJobs({
     return next.getTime() + 3 * 3600 * 1000;
   },
   dbHealthMs: 10 * 1000,
-  onTick: () => {},
+  onTick: (changedLines) => {
+    const nowMs = Date.now();
+    for (const lineId of changedLines) {
+      const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
+      hub.broadcast(
+        lineId,
+        JSON.stringify({
+          l: lineId,
+          t: Math.floor(nowMs / 1000),
+          v: JSON.parse(body).v,
+        }),
+      );
+    }
+  },
   onConfig: () => {},
 });
+
+// Application heartbeat every 25 s for Cloudflare idle timeouts.
+const heartbeat = setInterval(() => {
+  hub.heartbeat(Math.floor(Date.now() / 1000));
+}, 25 * 1000);
 
 Deno.addSignalListener("SIGTERM", shutdown);
 Deno.addSignalListener("SIGINT", shutdown);

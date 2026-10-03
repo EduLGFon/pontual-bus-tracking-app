@@ -1,12 +1,14 @@
 import { assertEquals } from "@std/assert";
 import { registryResolver } from "../src/data/lines.ts";
 import { buildApp } from "../src/http/app.ts";
+import { Hub } from "../src/ws/hub.ts";
 
 function testApp() {
   return buildApp({
     sql: null,
     store: null,
     lines: registryResolver([]),
+    hub: new Hub(),
     followerJitterS: 0,
     trustCloudflare: false,
     allowedOrigins: [],

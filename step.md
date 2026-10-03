@@ -1,21 +1,20 @@
-# step.md - Current step: T11 background jobs
+# step.md - Current step: T12 reads and stream
 
-Status: done 2026-10-02. Next: T12. T04 and T05 blocked on owner infra answers.
+Status: done 2026-10-02. Next: T13. T04 and T05 blocked on owner infra answers.
 
-## 1. What T11 is
+## 1. What T12 is
 
-PLAN.md section 16, Milestone M1. Deliverable: tick job and background jobs (tick, config refresh, device purge, db health) with overlap guard.
+PLAN.md section 16, Milestone M1. Deliverable: read endpoints (GET /v1/lines/{id}/vehicles with ETag, GET /v1/live), WebSocket hub (subscribe, caps, heartbeat, backpressure, bye), edge-cache headers.
 
 ## 2. Done 2026-10-02
 
-- Jobs module with guarded tick, refresh, purge, health probe, shutdown stop.
-- Wired into main.ts with 5 s, 30 s, daily 03:30 Sao Paulo, 10 s schedules.
-- Tests including restart semantics (test 19).
-- Verified: 52 tests pass, fmt/lint/check clean.
+- Snapshot builders plus read routes plus hub plus main wiring (tick broadcast, 25 s heartbeat, bye on shutdown).
+- Tests for AC05 (HTTP part), AC06, AC08.
+- Verified: 63 tests pass, fmt/lint/check clean, live 101 upgrade and endpoint checks via curl.
 
-## 3. Acceptance criteria (from PLAN T11)
+## 3. Acceptance criteria (from PLAN T12)
 
-- Test 19 and tick behaviour tests pass.
+- AC05, AC06, AC08 pass.
 
 ## 4. Verify
 
@@ -24,9 +23,9 @@ PLAN.md section 16, Milestone M1. Deliverable: tick job and background jobs (tic
 
 ## 5. Rules
 
-- One logical change only. No read endpoints (T12) or simulator (T13).
-- Docs English. No em dashes. Commit: `feat: add background jobs (T11)`.
+- One logical change only. No simulator (T13) or static data (T14).
+- Docs English. No em dashes. Commit: `feat: add read endpoints and stream (T12)`.
 
 ## 6. Next
 
-T12 (read endpoints GET /v1/lines/{id}/vehicles with ETag and GET /v1/live, plus WebSocket hub with subscribe, caps, heartbeat, backpressure, bye, and edge-cache headers).
+T13 (Deno simulator tools/sim with buses, riders, abuse scenarios, latency report against local/staging). Then M2 static data (T14-T17).

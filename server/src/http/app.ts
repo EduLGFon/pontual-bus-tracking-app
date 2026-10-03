@@ -8,12 +8,15 @@ import { clientIp } from "../security/clientIp.ts";
 import type { LineResolver } from "../data/lines.ts";
 import type { Store } from "../state/store.ts";
 import { buildAccountRoutes } from "./routes.ts";
+import { buildReadRoutes } from "./readRoutes.ts";
 import { buildTripRoutes } from "./tripRoutes.ts";
+import type { Hub } from "../ws/hub.ts";
 
 export interface AppOptions {
   sql: Sql | null;
   store: Store | null;
   lines: LineResolver;
+  hub: Hub | null;
   followerJitterS: number;
   trustCloudflare: boolean;
   allowedOrigins: string[];
@@ -38,6 +41,16 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
         opts.trustCloudflare,
       ),
     );
+    // Secure defaults before the handler; routes override cache-control.
+    c.header("x-request-id", requestId);
+    c.header("x-content-type-options", "nosniff");
+    c.header("referrer-policy", "no-referrer");
+    c.header("cache-control", "no-store");
+    const origin = c.req.header("origin");
+    if (origin && opts.allowedOrigins.includes(origin)) {
+      c.header("access-control-allow-origin", origin);
+      c.header("vary", "Origin");
+    }
     const start = Date.now();
     await next();
     const durationMs = Date.now() - start;
@@ -53,15 +66,6 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
         requestId,
       }),
     );
-    c.header("x-request-id", requestId);
-    c.header("x-content-type-options", "nosniff");
-    c.header("referrer-policy", "no-referrer");
-    c.header("cache-control", "no-store");
-    const origin = c.req.header("origin");
-    if (origin && opts.allowedOrigins.includes(origin)) {
-      c.header("access-control-allow-origin", origin);
-      c.header("vary", "Origin");
-    }
   });
 
   app.get("/v1/health", (c) => {
@@ -80,6 +84,18 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
         store: opts.store,
         lines: opts.lines,
         followerJitterS: opts.followerJitterS,
+      }),
+    );
+  }
+  if (opts.store && opts.hub) {
+    app.route(
+      "/",
+      buildReadRoutes({
+        store: opts.store,
+        lines: opts.lines,
+        hub: opts.hub,
+        allowedOrigins: opts.allowedOrigins,
+        trustCloudflare: opts.trustCloudflare,
       }),
     );
   }

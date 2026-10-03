@@ -300,6 +300,17 @@ PLAN.md 0.3).
   client auto-end work. Local verify: 46 tests pass covering AC02, AC07,
   AC09, AC10, AC14; live register plus consent plus start plus ping plus
   delete flow verified via curl.
+- 2026-10-02: T12 done. Public reads plus stream: GET
+  /v1/lines/{id}/vehicles with ETag, 304, and 5 s edge cache headers; GET
+  /v1/live with 10 s headers; read-only hub with per-IP and global caps,
+  128-byte and 10-per-minute message limits, and bye on shutdown. Heartbeat
+  is two layers: Deno protocol ping/pong via idleTimeout 60 plus an
+  app-level 25 s message for Cloudflare idle timeouts; clients ignore
+  unknown keys. Fixed header order so routes override the no-store default
+  with cache headers. Local verify: 63 tests pass covering AC05 (HTTP part),
+  AC06 (unit plus live 101 upgrade and invalid-line close), and AC08
+  (device and IP floods contained); live snapshot endpoints checked via
+  curl. Full WS relay through Cloudflare stays VERIFY on staging.
 - 2026-10-02: T11 done. Background jobs with overlap-guarded tick, 30 s
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store

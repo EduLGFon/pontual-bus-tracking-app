@@ -6,6 +6,7 @@ import { registryResolver } from "../src/data/lines.ts";
 import { openDb } from "../src/db/client.ts";
 import { buildApp } from "../src/http/app.ts";
 import { createStore } from "../src/state/store.ts";
+import { Hub } from "../src/ws/hub.ts";
 import { findDeviceByTokenHash } from "../src/db/devices.ts";
 import { tokenHash } from "../src/security/token.ts";
 
@@ -30,6 +31,7 @@ function app() {
     sql,
     store: createStore(),
     lines: registryResolver([{ id: 7, isActive: true, route: null }]),
+    hub: new Hub(),
     followerJitterS: 0,
     trustCloudflare: false,
     allowedOrigins: ["http://127.0.0.1:8080"],
