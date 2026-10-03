@@ -22,4 +22,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T16 static deploy files done (Pages _headers plus deploy workflow; project, DNS, and secrets owner-blocked).
 - T17 route tool done (GPX/GeoJSON to simplified GeoJSON plus polyline bundle plus server decode; real traces owner-blocked).
 - T18 app foundation done (theme tokens plus strings plus router skeleton, 200 percent scale green).
+- T19 client core done (Clock plus Log plus geo plus backoff plus Result, 97 percent coverage).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

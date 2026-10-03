@@ -358,6 +358,10 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T19 done. Client core utilities: injectable Clock, Log ring
+  buffer with no PII API, pure geo helpers, jittered backoff ladder, and
+  sealed Result plus AppFailure types. Local verify: analyze clean, 12
+  widget plus unit tests pass, line coverage 97.4 percent on core.
 - 2026-10-03: T18 done. App foundation: Material 3 tokens from PLAN 9.2,
   pt-BR string table, go_router skeleton with all ten alpha routes as
   placeholders. The 200 percent scale test caught a real welcome-screen
