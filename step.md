@@ -1,24 +1,22 @@
-# step.md - Current step: T31 location service
+# step.md - Current step: T32 ping sender
 
-Status: done 2026-10-03. Next: T32. Blocked: real route traces, Pages
+Status: done 2026-10-03. Next: T33. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T31 is
+## 1. What T32 is
 
-PLAN.md section 16, Milestone M5. Deliverable: LocationService with
-geolocator stream, foreground service, notification, filters, mode
-switching with hysteresis.
+PLAN.md section 16, Milestone M5. Deliverable: PingClient with seq,
+in-flight 1, latest-wins, backoff plus jitter, 401 refresh, server codes.
 
 ## 2. Done 2026-10-03
 
-- Pure acceptFix filter, rounding, per-mode settings, gateway.
-- Manifest permissions per PLAN 8.6 with no forbidden entries.
-- Verified: analyze clean, 73 tests pass, manifest audit clean.
+- PingClient with injected sender, clock-free delays, and outcomes.
+- Tests for success, backoff ladder, 401 refresh, latest-wins, end codes.
+- Verified: analyze clean, 78 tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T31)
+## 3. Acceptance criteria (from PLAN T32)
 
-- S1 criteria in real device; manifest audit passes. Device half stays
-  VERIFY for T47; audit passes here.
+- Tests per 15.3.
 
 ## 4. Verify
 
@@ -27,10 +25,10 @@ switching with hysteresis.
 
 ## 5. Rules
 
-- One logical change only. No ping client (T32).
-- Docs English. No em dashes. Commit: `feat: add location service (T31)`.
+- One logical change only. No trip controller wiring (T33).
+- Docs English. No em dashes. Commit: `feat: add ping sender (T32)`.
 
 ## 6. Next
 
-T32 (PingClient: seq, in-flight 1, latest-wins, backoff plus jitter, 401
-refresh, server codes).
+T33 (TripController wiring plus S08 trip screen plus S09 end states plus
+Android notification).

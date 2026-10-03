@@ -358,6 +358,11 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T32 done. Ping sender with one request in flight,
+  latest-wins coalescing, 5 to 60 s jittered backoff with retry of the
+  latest fix, single 401 refresh plus retry, and typed server outcomes
+  including auth exhaustion. Local verify: analyze clean, 78 client tests
+  pass, manifest audit clean.
 - 2026-10-03: T31 done. Location service with geolocator stream modes,
   foreground notification config, mock plus accuracy plus bbox plus stale
   filters, send-format rounding, and hysteresis, plus the geolocator
