@@ -90,3 +90,7 @@ SamplingMode _wanted(TripModeInput input) {
       return SamplingMode.waiting;
   }
 }
+
+/// Wanted sampling mode without hysteresis. The caller (LocationService
+/// or TripController) applies the 30 s stream-recreation guard.
+SamplingMode wantedMode(TripModeInput input) => _wanted(input);

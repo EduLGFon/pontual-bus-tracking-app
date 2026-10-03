@@ -23,6 +23,12 @@ const int gpsOffAfterMs = 5 * 60 * 1000;
 /// Walking prompt timeout in milliseconds.
 const int walkingTimeoutMs = 3 * 60 * 1000;
 
+/// Slow-speed duration before the RF16 prompt appears in milliseconds.
+const int walkingPromptAfterMs = 4 * 60 * 1000;
+
+/// Speed below which a fix counts as slow (walking or stopped bus).
+const double walkingSlowMaxMps = 0.5;
+
 /// Hard trip cap in milliseconds.
 const int tripMaxMs = 4 * 3600 * 1000;
 
@@ -67,4 +73,21 @@ AutoEndReason? autoEndReason(AutoEndInput input, int nowMs) {
     return AutoEndReason.maxDuration;
   }
   return null;
+}
+
+/// True when the RF16 walking prompt should appear: the device has been
+/// slow for at least [walkingPromptAfterMs] and no prompt is showing.
+/// Pure; the controller owns the slow-speed clock and the dialog.
+bool walkingPromptDue({
+  required int? slowSinceMs,
+  required int? promptAtMs,
+  required int nowMs,
+}) {
+  if (promptAtMs != null) {
+    return false;
+  }
+  if (slowSinceMs == null) {
+    return false;
+  }
+  return nowMs - slowSinceMs >= walkingPromptAfterMs;
 }

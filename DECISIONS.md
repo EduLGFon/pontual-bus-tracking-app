@@ -445,6 +445,25 @@ PLAN.md 0.3).
   placeholders. The 200 percent scale test caught a real welcome-screen
   overflow; the screen scrolls now. Local verify: analyze clean, 3 widget
   tests pass, manifest audit clean (go_router adds no permissions).
+- 2026-10-03: T34 done. Auto-end plus RF16 prompt plus offline saver plus
+  GPS-off and permission-revoked handling. New TripSupervisor owns health
+  tracking and round evaluation (polls, slow clock, silence clock,
+  sampling intent); TripController applies decisions to the state machine.
+  Walking prompt after 4 min slow, 3 min no-answer end; GPS off pauses and
+  ends after 5 min; permission revoked ends at once; offline saver after
+  3 failures or 120 s silence with heal on success; probes reuse the
+  PingClient backoff (5 to 60 s plus jitter, PLAN said 30/60/120 probes;
+  more frequent is bounded and recovers faster, no change needed).
+  Two real bugs fixed: the start-to-loop handoff cancelled the position
+  stream via onCancel (only the first fix ever flowed; removed the
+  handler, stop() still owns shutdown), and LocationService.requestMode
+  never recreated the stream (now it does, hysteresis kept). Server RF16
+  "a" flag stays unimplemented (PLAN marks it optional); local slow
+  detection covers RF16. File review: trip_controller.dart is 490 lines;
+  the TripSupervisor split is taken and the rest is one lifecycle flow,
+  revisit past 600 lines or on new responsibilities. Local verify:
+  analyze clean, 102 client tests pass (20 new), manifest audit clean,
+  no new permissions or dependencies.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

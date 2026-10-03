@@ -19,6 +19,7 @@ import 'package:pontual/features/trip/consent_flow.dart';
 import 'package:pontual/features/trip/location_service.dart';
 import 'package:pontual/features/trip/permission_sheet.dart';
 import 'package:pontual/features/trip/ping_client.dart';
+import 'package:pontual/features/trip/trip_supervisor.dart';
 
 /// Trip end reasons shown on the S09 end card.
 enum TripEndKind {
@@ -104,6 +105,23 @@ class TripController extends ChangeNotifier {
   StreamSubscription<TripFix>? _fixSub;
   PingClient? _ping;
   Timer? _autoEndTimer;
+  String? _activeToken;
+  TripSupervisor? _supervisor;
+  SamplingMode _samplingMode = SamplingMode.waiting;
+  bool _checking = false;
+
+  /// True while the RF16 walking prompt should be on screen.
+  bool get walkingPromptVisible => _supervisor?.promptVisible ?? false;
+
+  /// True while sends keep failing and only probes go out.
+  bool get isOffline => activeRole(_state) == TripRole.offlineSaver;
+
+  /// True while location services are off (stream paused, banner shown).
+  bool get isPaused => _supervisor?.paused ?? false;
+
+  /// Current sampling mode for tests and the location service.
+  @visibleForTesting
+  SamplingMode get samplingMode => _samplingMode;
 
   void _set(TripState next) {
     _state = next;
@@ -121,6 +139,8 @@ class TripController extends ChangeNotifier {
     _lineLabel = lineLabel;
     _endKind = null;
     _endDetail = null;
+    _supervisor = TripSupervisor(gateway: _deps.gateway);
+    _samplingMode = SamplingMode.waiting;
     _set(tripReduce(_state, TripEvent.tapStart));
 
     final ConsentResult consent = await ensureConsent(
@@ -184,12 +204,14 @@ class TripController extends ChangeNotifier {
       return false;
     }
     _startedAtMs = _deps.clock.nowMs();
+    _supervisor?.begin(_startedAtMs!);
     _set(tripReduce(_state, TripEvent.startConfirmed));
     _runLoop(token, stream);
     return true;
   }
 
   void _runLoop(String token, Stream<TripFix> stream) {
+    _activeToken = token;
     _ping = PingClient(
       send: (Map<String, dynamic> fix) async {
         final Result<TripInstruction> res = await _deps.api.pingTrip(
@@ -222,11 +244,24 @@ class TripController extends ChangeNotifier {
       delay: (Duration d) => Future<void>.delayed(d),
     );
     _fixSub = stream.listen((TripFix fix) {
+      _onFix(fix);
       _ping?.queue(_fixBody(fix), (PingOutcome o) => _onOutcome(token, o));
     });
     _autoEndTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      _checkAutoEnd(token);
+      unawaited(_checkAutoEnd(token));
     });
+  }
+
+  void _onFix(TripFix fix) {
+    final TripSupervisor? supervisor = _supervisor;
+    if (supervisor == null) {
+      return;
+    }
+    final bool hadPrompt = supervisor.promptVisible;
+    supervisor.onFix(fix, _deps.clock.nowMs());
+    if (supervisor.promptVisible != hadPrompt) {
+      notifyListeners();
+    }
   }
 
   String _serverRole() {
@@ -265,11 +300,20 @@ class TripController extends ChangeNotifier {
       end();
       return;
     }
+    final TripSupervisor? supervisor = _supervisor;
+    if (supervisor == null) {
+      return;
+    }
+    supervisor.onPingSuccess(_deps.clock.nowMs());
+    if (isOffline) {
+      _set(tripReduce(_state, TripEvent.wentOnline));
+    }
     if (outcome.role == 'L') {
       _set(tripReduce(_state, TripEvent.roleLeader));
     } else if (outcome.role == 'F') {
       _set(tripReduce(_state, TripEvent.roleFollower));
     }
+    _applyRound(supervisor);
   }
 
   TripEndKind _kindFor(String end) {
@@ -284,26 +328,98 @@ class TripController extends ChangeNotifier {
     }
   }
 
-  void _checkAutoEnd(String token) {
-    if (_startedAtMs == null) {
+  Future<void> _checkAutoEnd(String token) async {
+    final TripSupervisor? supervisor = _supervisor;
+    if (_checking ||
+        _startedAtMs == null ||
+        supervisor == null ||
+        !tripInProgress(_state)) {
       return;
     }
-    final AutoEndReason? reason = autoEndReason(
-      AutoEndInput(
-        startedAtMs: _startedAtMs!,
-        gpsOffSinceMs: null,
-        permissionRevoked: false,
-        walkingPromptAtMs: null,
-      ),
-      _deps.clock.nowMs(),
-    );
-    if (reason == AutoEndReason.maxDuration) {
-      void end() async {
-        await _finish(token, TripEndKind.automatic, 'max');
-      }
-
-      end();
+    _checking = true;
+    try {
+      await supervisor.pollEnvironment(_deps.clock.nowMs());
+      await _applyRound(supervisor, token: token);
+    } finally {
+      _checking = false;
     }
+  }
+
+  /// Applies one supervision round: ends, offline flips, sampling, prompt.
+  Future<void> _applyRound(TripSupervisor supervisor, {String? token}) async {
+    if (_startedAtMs == null || !tripInProgress(_state)) {
+      return;
+    }
+    final bool hadPrompt = supervisor.promptVisible;
+    final Supervision round = supervisor.evaluate(
+      role: _serverRole(),
+      failures: _ping?.consecutiveFailures ?? 0,
+      wasOffline: isOffline,
+      startedAtMs: _startedAtMs!,
+      nowMs: _deps.clock.nowMs(),
+    );
+    final AutoEndReason? reason = round.endReason;
+    if (reason != null && token != null) {
+      final TripEndKind kind =
+          reason == AutoEndReason.permissionRevoked ||
+              reason == AutoEndReason.gpsOff
+          ? TripEndKind.permission
+          : TripEndKind.automatic;
+      await _finish(token, kind, _detailFor(reason));
+      return;
+    }
+    if (round.offline && !isOffline) {
+      _set(tripReduce(_state, TripEvent.wentOffline));
+    }
+    final LocationService? locations = _locations;
+    if (locations != null) {
+      _samplingMode = locations.requestMode(round.wanted, _deps.clock.nowMs());
+    }
+    if (supervisor.promptVisible != hadPrompt) {
+      notifyListeners();
+    }
+  }
+
+  String _detailFor(AutoEndReason reason) {
+    switch (reason) {
+      case AutoEndReason.permissionRevoked:
+        return 'permission';
+      case AutoEndReason.gpsOff:
+        return 'gps';
+      case AutoEndReason.walkingTimeout:
+        return 'walking';
+      case AutoEndReason.maxDuration:
+        return 'max';
+    }
+  }
+
+  /// Runs one auto-end evaluation with the active trip token.
+  /// Test hook: the periodic timer owns this in production.
+  @visibleForTesting
+  Future<void> checkAutoEndForTest() async {
+    final String? token = _activeToken;
+    if (token != null) {
+      await _checkAutoEnd(token);
+    }
+  }
+
+  /// Feeds one accepted fix through the slow-speed tracker. Test hook:
+  /// production fixes arrive from the location stream.
+  @visibleForTesting
+  void onFixForTest(TripFix fix) {
+    _onFix(fix);
+  }
+
+  /// RF16: the user confirms they are still on the bus. Hides the prompt
+  /// and restarts the slow-speed clock for another 4 minutes.
+  void confirmStillRiding() {
+    _supervisor?.confirmStillRiding();
+    notifyListeners();
+  }
+
+  /// RF16: the user confirms they left the bus. Ends the trip as a user end.
+  Future<void> confirmLeftBus() async {
+    await endTrip();
   }
 
   /// Ends the trip now: stops the service, then best-effort server end.
@@ -339,6 +455,10 @@ class TripController extends ChangeNotifier {
 
   Future<void> _stopLocal() async {
     _autoEndTimer?.cancel();
+    _autoEndTimer = null;
+    _activeToken = null;
+    _supervisor?.reset();
+    _supervisor = null;
     final StreamSubscription<TripFix>? sub = _fixSub;
     _fixSub = null;
     if (sub != null) {

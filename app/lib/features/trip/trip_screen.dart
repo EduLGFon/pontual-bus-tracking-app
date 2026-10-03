@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/domain/trip/trip_state.dart';
 import 'package:pontual/features/trip/trip_controller.dart';
 
@@ -22,11 +23,13 @@ class TripScreen extends StatefulWidget {
 
 class _TripScreenState extends State<TripScreen> {
   Timer? _ticker;
+  bool _promptOpen = false;
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_refresh);
+    widget.controller.addListener(_maybePrompt);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {});
@@ -38,12 +41,59 @@ class _TripScreenState extends State<TripScreen> {
   void dispose() {
     _ticker?.cancel();
     widget.controller.removeListener(_refresh);
+    widget.controller.removeListener(_maybePrompt);
     super.dispose();
   }
 
   void _refresh() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _maybePrompt() {
+    if (!widget.controller.walkingPromptVisible || _promptOpen) {
+      return;
+    }
+    _promptOpen = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_showWalking());
+      } else {
+        _promptOpen = false;
+      }
+    });
+  }
+
+  Future<void> _showWalking() async {
+    final TripController c = widget.controller;
+    final bool? still = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(StringsPt.walkingTitle),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(StringsPt.walkingNo),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(StringsPt.walkingYes),
+            ),
+          ],
+        );
+      },
+    );
+    _promptOpen = false;
+    if (!mounted) {
+      return;
+    }
+    if (still == true) {
+      c.confirmStillRiding();
+    } else {
+      await c.confirmLeftBus();
     }
   }
 
@@ -73,8 +123,13 @@ class _TripScreenState extends State<TripScreen> {
           const SizedBox(height: 12),
           Text('Tempo de viagem  $elapsed'),
           const SizedBox(height: 12),
-          const Text('Conexão     ✓ Conectado'),
+          Text(c.isOffline ? StringsPt.disconnected : StringsPt.connected),
+          Text(c.isPaused ? StringsPt.gpsOff : StringsPt.gpsGood),
           Text('Seu celular  ${_roleText(c)}'),
+          if (c.isPaused) ...<Widget>[
+            const SizedBox(height: 12),
+            const Text(StringsPt.gpsOffBanner),
+          ],
           const SizedBox(height: 24),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(0, 56)),
@@ -107,6 +162,8 @@ class _TripScreenState extends State<TripScreen> {
         return 'Enviando com mais frequência';
       case TripRole.follower:
         return 'Modo economia';
+      case TripRole.offlineSaver:
+        return StringsPt.offlineSaver;
       default:
         return 'Aguardando o ônibus sair…';
     }
@@ -133,8 +190,14 @@ class EndCard extends StatelessWidget {
         if (detail == 'idle') {
           return 'Encerramos porque o celular ficou parado por 10 minutos.';
         }
+        if (detail == 'walking') {
+          return 'Encerramos porque parecia que você já tinha descido.';
+        }
         return 'Encerramos por tempo máximo ou falta de sinal.';
       case TripEndKind.permission:
+        if (detail == 'gps') {
+          return 'Encerramos porque a localização ficou desligada.';
+        }
         return 'Encerramos porque a permissão de localização foi removida.';
       case TripEndKind.abuse:
         return 'Encerramos por envios de localização inconsistentes.';

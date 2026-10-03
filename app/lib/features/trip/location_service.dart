@@ -189,6 +189,7 @@ class LocationService {
   int _seq = 0;
   int _lastChangeMs = 0;
   SamplingMode _mode = SamplingMode.waiting;
+  String _lineLabel = '';
 
   /// Starts emitting accepted fixes for [mode]. Recreates the stream when
   /// the policy switches modes, at most once per 30 seconds.
@@ -200,60 +201,70 @@ class LocationService {
     final StreamController<TripFix> controller =
         StreamController<TripFix>.broadcast();
     _controller = controller;
-    void listen(SamplingMode m) {
-      _sub?.cancel();
-      _sub = _positionStream(settingsFor(m, lineLabel)).listen((Position p) {
-        void handle() async {
-          final RawFix raw = RawFix(
-            lat: p.latitude,
-            lng: p.longitude,
-            accuracyM: p.accuracy,
-            isMocked: p.isMocked,
-            timestampMs: p.timestamp.millisecondsSinceEpoch,
-          );
-          if (!acceptFix(raw, _nowMs())) {
-            return;
-          }
-          _seq += 1;
-          final int level = await _batteryLevel();
-          final bool chg = await _charging();
-          if (!controller.isClosed) {
-            controller.add(
-              TripFix(
-                seq: _seq,
-                lat: round5(raw.lat),
-                lng: round5(raw.lng),
-                speedMps: (p.speed * 10).round() / 10,
-                heading: p.heading >= 0 ? p.heading : null,
-                accuracyM: raw.accuracyM,
-                batteryPct: batteryBucket(level.clamp(0, 100)),
-                charging: chg,
-              ),
-            );
-          }
-        }
-
-        handle();
-      });
-    }
-
-    listen(mode);
+    _lineLabel = lineLabel;
+    _listen(mode, controller);
     _mode = mode;
     _lastChangeMs = _nowMs();
-    controller.onCancel = () async {
-      await _sub?.cancel();
-      _sub = null;
-    };
+    // No onCancel handler by design: TripController awaits stream.first
+    // for the start fix, and cancelling the position stream when that
+    // one-shot subscription ends would starve the run loop. Only stop()
+    // ends the stream. See DECISIONS.md T34.
     return controller.stream;
   }
 
-  /// Requests a mode switch honoring hysteresis. Returns the active mode.
+  void _listen(SamplingMode m, StreamController<TripFix> controller) {
+    unawaited(_sub?.cancel());
+    _sub = _positionStream(settingsFor(m, _lineLabel)).listen((Position p) {
+      void handle() async {
+        final RawFix raw = RawFix(
+          lat: p.latitude,
+          lng: p.longitude,
+          accuracyM: p.accuracy,
+          isMocked: p.isMocked,
+          timestampMs: p.timestamp.millisecondsSinceEpoch,
+        );
+        if (!acceptFix(raw, _nowMs())) {
+          return;
+        }
+        _seq += 1;
+        final int level = await _batteryLevel();
+        final bool chg = await _charging();
+        if (!controller.isClosed) {
+          controller.add(
+            TripFix(
+              seq: _seq,
+              lat: round5(raw.lat),
+              lng: round5(raw.lng),
+              speedMps: (p.speed * 10).round() / 10,
+              heading: p.heading >= 0 ? p.heading : null,
+              accuracyM: raw.accuracyM,
+              batteryPct: batteryBucket(level.clamp(0, 100)),
+              charging: chg,
+            ),
+          );
+        }
+      }
+
+      handle();
+    });
+  }
+
+  /// Requests a mode switch honoring hysteresis. Recreates the underlying
+  /// position stream when the mode actually changes so offline saver drops
+  /// to low-power GPS. Returns the active mode.
   SamplingMode requestMode(SamplingMode mode, int nowMs) {
+    if (mode == _mode) {
+      return _mode;
+    }
     if (nowMs - _lastChangeMs < streamHysteresisMs) {
       return _mode;
     }
     _mode = mode;
     _lastChangeMs = nowMs;
+    final StreamController<TripFix>? controller = _controller;
+    if (controller != null && !controller.isClosed) {
+      _listen(mode, controller);
+    }
     return _mode;
   }
 

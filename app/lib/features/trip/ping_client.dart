@@ -69,6 +69,9 @@ class PingClient {
   bool _refreshed = false;
   int _attempt = 0;
 
+  /// Consecutive failed sends. The controller uses it for offline saver.
+  int get consecutiveFailures => _attempt;
+
   /// Queues a fix for sending. Sends immediately when idle.
   void queue(
     Map<String, dynamic> fix,

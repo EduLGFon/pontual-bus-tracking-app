@@ -68,6 +68,36 @@ class StringsPt {
   /// System screen title.
   static const String systemTitle = 'Aviso';
 
+  /// RF16 walking prompt title.
+  static const String walkingTitle = 'Você ainda está no ônibus?';
+
+  /// Confirm button keeping the trip alive.
+  static const String walkingYes = 'Sim, continuar';
+
+  /// Confirm button ending the trip.
+  static const String walkingNo = 'Desci';
+
+  /// Offline saver status row.
+  static const String offlineSaver =
+      'Sem conexão. Vamos retomar assim que voltar.';
+
+  /// GPS-off banner text.
+  static const String gpsOffBanner =
+      'Ative a localização para continuar compartilhando.';
+
+  /// Connection status when connected.
+  static const String connected = 'Conexão     ✓ Conectado';
+
+  /// Connection status when offline.
+  static const String disconnected =
+      'Conexão     ✕ Sem conexão - tentando de novo';
+
+  /// GPS status when the fix quality is good.
+  static const String gpsGood = 'GPS         ✓ Bom';
+
+  /// GPS status when location services are off.
+  static const String gpsOff = 'GPS         Desligado';
+
   /// Placeholder body for screens built in later tasks.
   static const String placeholderBody = 'Em construção.';
 }

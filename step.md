@@ -1,39 +1,40 @@
-# step.md - Current step: T33 trip controller
+# step.md - Current step: T35 two-device test
 
-Status: done 2026-10-03. Next: T34. Blocked: real route traces, Pages
+Status: T34 done 2026-10-03. Next: T35. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys, staging E2E need owner.
 
-## 1. What T33 is
+## 1. What T34 delivered
 
-PLAN.md section 16, Milestone M5. Deliverable: TripController wiring
-plus S08 trip screen plus S09 end states plus Android notification.
+PLAN.md section 16, Milestone M5. Auto-end plus RF16 prompt plus offline
+saver plus GPS-off and permission-revoked handling.
 
-## 2. Done 2026-10-03
+- TripSupervisor (health tracking plus round evaluation) plus
+  TripController wiring (state transitions plus sampling).
+- S08 status rows are live (offline, paused, role) plus the RF16 dialog
+  plus S09 walking and GPS end messages.
+- Fixes from testing: first-fix handoff no longer kills the position
+  stream; requestMode recreates the stream with hysteresis.
+- Verified: analyze clean, 102 tests pass (20 new), manifest audit
+  clean, no new permissions or dependencies.
 
-- Controller with consent, permission, register, first-fix start, ping
-  loop, role updates, auto-end, best-effort end.
-- S08 screen with ticker plus role rows plus Desci; S09 end cards.
-- Notification is the geolocator foreground notification (tap opens app;
-  no action button exists per S1).
-- Verified: analyze clean, 82 tests pass, manifest audit clean, local E2E
-  on bundle data green.
+## 2. Acceptance criteria (from PLAN T35)
 
-## 3. Acceptance criteria (from PLAN T33)
+- Two-device test with simulator plus real phones: leader hand-over,
+  promotion latency measured.
+- Meets alpha criteria 2-3 or documented.
 
-- Solo ride works end-to-end on the staging server. Staging is
-  owner-blocked; local-server E2E passes instead.
-
-## 4. Verify
+## 3. Verify
 
 1. `flutter analyze` clean in app/.
 2. `flutter test` passes in app/.
 
-## 5. Rules
+## 4. Rules
 
-- One logical change only. No auto-end extras (T34).
-- Docs English. No em dashes. Commit: `feat: add trip controller (T33)`.
+- One logical change only. No M6 web work.
+- Docs English. No em dashes. Commit: `feat: add trip auto-end and offline saver (T34)`.
+- T34 commit is pending; include it in the T34 change set or commit now.
 
-## 6. Next
+## 5. Next
 
-T34 (auto-end plus RF16 prompt plus offline saver plus GPS-off and
-permission-revoked handling).
+T35 (two-device hand-over test with simulator plus real phones).
+Staging owner-blocked; local-server runs first.
