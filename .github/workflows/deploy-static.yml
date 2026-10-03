@@ -34,7 +34,7 @@ jobs:
         run: deno task data-build
       - name: Build web
         working-directory: app
-        run: flutter build web --release --no-web-resources-cdn
+        run: flutter build web --release --no-web-resources-cdn --wasm
       - name: Assemble Pages directory
         run: |
           rm -rf pages && mkdir -p pages/data

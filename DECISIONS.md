@@ -464,6 +464,65 @@ PLAN.md 0.3).
   revisit past 600 lines or on new responsibilities. Local verify:
   analyze clean, 102 client tests pass (20 new), manifest audit clean,
   no new permissions or dependencies.
+- 2026-10-03: HEAD faceb05 reconciled (was unrecorded). It closes the M5
+  sharing gap: `share_flow.dart` wires MapTab buttons through services check,
+  consent sheet, permission education, TripController start, then navigates
+  to /trip with the started controller; /trip without a controller shows the
+  fallback placeholder; non-pilot lines are a no-op. Plus server hardening:
+  config-refresh and purge jobs catch DB errors instead of crashing the
+  process (reads stay up while the database is down), a `lines loaded`
+  boot log with an empty-registry hint, and `deno task dev` reads
+  `--env-file=.env`. AC impact: none beyond T33/T34 scope; no schema or
+  contract change.
+- 2026-10-03: T35 local part done (real phones stay owner-blocked, see T47).
+  Ran against the local server on bundle data (21 lines) with an isolated
+  docker PG (owner DB connection is recorded below). 90 s sim, 1 bus,
+  2 riders on line 60: 36 pings, 2 role changes, 1 hand-over, 34 WS
+  snapshots, last vehicle age 0 s, p50 latency 6 ms, p95 about 5 s
+  (snapshot cadence), no errors. Leader-kill script: riders merged to one
+  L plus one F, killing the leader promoted the follower in about 5 s
+  (next ping, inside the KL1 bound), snapshot ages stayed under 20 s.
+  Alpha criteria 2 and 3 hold locally. Test hygiene found: AC14 leaves
+  `service_enabled=false` in the shared dev database, so later runs 503
+  until app_config is cleared; the 8-hour soak (T46) must reset app_config
+  first. Owner-blocked: the repo-root .env database rejects the 0001
+  migration with `permission denied to create role` (restricted DB user,
+  needs CREATEROLE or a one-time superuser migrate); local runs used the
+  docker PG on 5433 instead.
+- 2026-10-03: T36 test repairs (client suite had 2 failures from the
+  unrecorded HEAD commit). (1) `trip_rig.start()` hung forever under
+  testWidgets: it yielded with `Future.delayed(Duration.zero)`, a timer
+  that never fires in FakeAsync without pumped time. Plain `test()` uses
+  real async so it passed there. Fixed with a microtask yield, which works
+  in both zones. (2) Second share-flow test went silent: `shareButton`
+  read flags through the real `remoteConfigRepoProvider`, whose
+  rootBundle asset load answers only the first testWidgets per file and
+  never completes later (mocked channels repeat fine; engine-served
+  assets do not - verified with isolated probes). Tests now override the
+  provider with literal bundle JSON per the existing home_test pattern,
+  so no widget test touches rootBundle or the network. No production
+  change: every silent share path either shows UI or correctly aborts a
+  dead screen, and no trip starts without consent. File green (5 tests),
+  analyze clean.
+- 2026-10-03: Late-outcome dispose guard (production fix). The rig timing
+  change exposed a real crash: a ping outcome arriving after the trip
+  screen is gone called notifyListeners on a disposed TripController
+  (same for a resumed auto-end check). `_onOutcome` and `_checkAutoEnd`
+  now ignore work after dispose via a `_disposed` flag. The previously
+  failing auto-end test is the regression cover. Targeted files green,
+  full suite re-running.
+- 2026-10-03: T36 done. Web build config: PWA manifest rebranded to
+  Pontual with the app green (#0B6E4F), deploy builds with
+  `--no-web-resources-cdn --wasm` (S4: single-threaded skwasm beats
+  CanvasKit; iOS keeps the JS fallback). Measured first load gzipped:
+  default path about 2.9 MB (main.dart.js 870 KB plus chromium
+  canvaskit.wasm 2010 KB plus fonts), wasm path about 2.6 MB; both
+  inside the 3 MB budget, so no size ADR needed. CSP unchanged and
+  strict (wasm-unsafe-eval already allowed; no COOP/COEP needed for
+  single-threaded skwasm); Google Fonts stays blocked so web uses
+  fallback fonts until the S4 font issue is resolved. Verified: full
+  client suite green (107 passed), analyze clean, both builds compile.
+  Owner-blocked deploy (Pages project, DNS, secrets) unchanged.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

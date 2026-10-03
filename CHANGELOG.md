@@ -37,4 +37,6 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T31 location done (geolocator stream plus FGS notification plus filters plus manifest permissions).
 - T32 ping sender done (in-flight 1 plus latest-wins plus backoff plus 401 refresh plus server codes).
 - T33 trip controller done (full lifecycle plus S08 screen plus S09 end cards, local E2E green).
+- Share-trip flow wired (MapTab entry, consent plus permissions, /trip serves the started controller, fallback otherwise).
+- T36 web build done (Pontual PWA manifest, self-hosted assets, wasm dual build, first load inside 3 MB budget).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
