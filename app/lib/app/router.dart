@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/features/home/home_screen.dart';
 import 'package:pontual/features/line/line_screen.dart';
+import 'package:pontual/features/settings/about_screen.dart';
+import 'package:pontual/features/settings/settings_screen.dart';
 import 'package:pontual/features/trip/trip_controller.dart';
 import 'package:pontual/features/trip/trip_screen.dart';
 
@@ -60,7 +62,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/settings',
         builder: (BuildContext context, GoRouterState state) {
-          return const SettingsPlaceholder();
+          return const SettingsScreen();
         },
       ),
       GoRoute(
@@ -86,7 +88,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/about',
         builder: (BuildContext context, GoRouterState state) {
-          return const AboutPlaceholder();
+          return const AboutScreen();
         },
       ),
       GoRoute(
@@ -161,17 +163,6 @@ class TripPlaceholder extends StatelessWidget {
   }
 }
 
-/// Settings screen skeleton.
-class SettingsPlaceholder extends StatelessWidget {
-  /// Creates the settings skeleton.
-  const SettingsPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.settingsTitle, StringsPt.settingsTitle);
-  }
-}
-
 /// Privacy center skeleton.
 class PrivacyPlaceholder extends StatelessWidget {
   /// Creates the privacy skeleton.
@@ -202,17 +193,6 @@ class TermsPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return placeholder(StringsPt.privacyTitle, StringsPt.privacyTitle);
-  }
-}
-
-/// About screen skeleton.
-class AboutPlaceholder extends StatelessWidget {
-  /// Creates the about skeleton.
-  const AboutPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.aboutTitle, StringsPt.aboutTitle);
   }
 }
 

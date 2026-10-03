@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -32,6 +33,45 @@ final Provider<http.Client> httpClientProvider = Provider<http.Client>((
 /// Opaque device token storage.
 final Provider<TokenStore> tokenStoreProvider = Provider<TokenStore>((Ref ref) {
   return const TokenStore();
+});
+
+/// Theme mode selected in Settings. Defaults to system; loaded from
+/// prefs at startup by PontualApp.
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.system;
+
+  /// Applies the mode chosen in Settings.
+  void set(ThemeMode mode) {
+    state = mode;
+  }
+}
+
+/// Provides the current theme mode.
+final NotifierProvider<ThemeModeNotifier, ThemeMode> themeModeProvider =
+    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+/// Timetable build date (dd/MM/yyyy) from the bundled manifest, shown
+/// in Settings after the timetables prefix.
+final FutureProvider<String> timetableDateProvider = FutureProvider<String>((
+  Ref ref,
+) async {
+  try {
+    final String manifest = await rootBundle.loadString(
+      'assets/data/manifest.json',
+    );
+    final Map<String, dynamic> decoded =
+        jsonDecode(manifest) as Map<String, dynamic>;
+    final String? generatedAt = decoded['generated_at'] as String?;
+    if (generatedAt == null) {
+      return '';
+    }
+    final DateTime dt = DateTime.parse(generatedAt);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year}';
+  } catch (_) {
+    return '';
+  }
 });
 
 /// API client. Performs no network calls until used by trip sharing.

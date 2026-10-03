@@ -126,4 +126,63 @@ class StringsPt {
 
   /// iOS install hint dismiss button.
   static const String installHintDismiss = 'Entendi';
+
+  /// Settings theme section title.
+  static const String themeTitle = 'Tema';
+
+  /// Theme option following the system.
+  static const String themeSystem = 'Sistema';
+
+  /// Light theme option.
+  static const String themeLight = 'Claro';
+
+  /// Dark theme option.
+  static const String themeDark = 'Escuro';
+
+  /// Row opening the privacy center.
+  static const String privacyData = 'Privacidade e dados';
+
+  /// Row opening the about screen.
+  static const String aboutSources = 'Sobre e fontes de dados';
+
+  /// Settings help section title.
+  static const String helpTitle = 'Ajuda';
+
+  /// How to share a trip.
+  static const String helpShare =
+      'Para compartilhar: abra a linha do seu ônibus, toque em "Estou no ônibus" e confirme. Toque em "Desci" ao descer.';
+
+  /// Battery tip for trips stopped by the system.
+  static const String helpBattery =
+      'Se a viagem parar sozinha, defina a bateria do app como "Sem restrições" nas configurações do celular.';
+
+  /// Web and iOS notice.
+  static const String helpWeb =
+      'Na web e no iPhone, o compartilhamento funciona só com a tela aberta.';
+
+  /// Contact row label.
+  static const String contactUs = 'Falar com a gente';
+
+  /// Timetable version prefix.
+  static const String timetablesPrefix = 'Horários: ';
+
+  /// About non-affiliation disclaimer.
+  static const String aboutDisclaimer =
+      'App independente e não oficial. Não é da Viação São Gabriel nem da Prefeitura de São Mateus.';
+
+  /// About sources section title.
+  static const String aboutSourcesTitle = 'Fontes dos dados';
+
+  /// About source line for timetables.
+  static const String aboutSourceLines =
+      'Linhas e horários: transcritos de páginas públicas (onibus.online). Horários não oficiais e podem mudar sem aviso.';
+
+  /// OSM attribution row.
+  static const String aboutOsm = 'Mapa: © OpenStreetMap contributors';
+
+  /// Row opening the open-source licences page.
+  static const String aboutLicences = 'Licenças de código aberto';
+
+  /// Row opening the source repository.
+  static const String aboutRepo = 'Código-fonte';
 }
