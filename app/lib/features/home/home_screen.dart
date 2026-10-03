@@ -8,6 +8,7 @@ import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/app/theme.dart';
 import 'package:pontual/data/api/dto.dart';
 import 'package:pontual/data/static_data/static_data.dart';
+import 'package:pontual/platform/web/install_hint.dart';
 
 /// Home screen with search, live section, and the full line list.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -74,6 +75,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
+        const InstallHintSlot(),
         Semantics(
           label: StringsPt.homeSearchHint,
           textField: true,

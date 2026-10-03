@@ -116,4 +116,14 @@ class StringsPt {
   /// Shown while a web trip is paused for a hidden page.
   static const String webHiddenPaused =
       'Tela oculta: compartilhamento pausado. Volte para esta aba para continuar.';
+
+  /// iOS install hint title.
+  static const String installHintTitle = 'Instale o Pontual';
+
+  /// iOS install hint steps for the Safari share sheet.
+  static const String installHintBody =
+      'No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início" para abrir como app.';
+
+  /// iOS install hint dismiss button.
+  static const String installHintDismiss = 'Entendi';
 }
