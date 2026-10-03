@@ -559,6 +559,16 @@ PLAN.md 0.3).
   `inventory.md` (processing records from 13.2). Owner-blocked:
   lawyer review, contact e-mail (INFRA-23), licences (INFRA-19
   data half), canonical URLs (INFRA-05).
+- 2026-10-03: T43 done. Ran every AC test that can run on this host:
+  server 67 green (first run showed 24 `TEST_DATABASE_URL is not
+  set` errors, env gap only), client 131 green, fmt/lint/check and
+  analyze clean, manifest source audit PASS. AC17 debug-log trip
+  audit has zero hits for coordinates, tokens, or device ids. Wrote
+  docs/security/review-alpha.md: no open P0/P1 in code; AC04, AC20,
+  AC21 blocked on the VPS (server/deploy/ still empty, T05); AC15
+  partial until the release AAB; AC16 partial until a gitleaks run
+  (CI covers it per release); AC08 scale and AC06 relay need
+  staging.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam

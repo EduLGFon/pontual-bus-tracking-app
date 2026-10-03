@@ -44,4 +44,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T40 settings and about done (theme with persistence, help, timetable date, sources, OSM attribution, licences, repo link; contact hidden until INFRA-23).
 - T41 privacy center done (bundled policy/terms, 6-line summary, delete-my-data end-to-end AC13, revoke consent; support code cut per cut order).
 - T42 privacy docs done (policy and terms drafts pt-BR, RIPD-lite, data inventory; lawyer review and contact still owner-blocked).
+- T43 security review done (docs/security/review-alpha.md; all suites green; no open P0/P1 in code; VPS, release-build, and browser items recorded as blocked).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
