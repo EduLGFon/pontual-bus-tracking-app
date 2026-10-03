@@ -1,33 +1,35 @@
-# step.md - Parked: T37 browser and device checks
+# step.md - progress past T37
 
-Status: T36 done 2026-10-03 (manifest rebrand, wasm dual build, size
-inside budget, full suite 107 green). T35 local done (real phones with
-T47). T37 viewer code is platform-clean, but browser and on-device
-verification moves to another machine (owner todo).
+Status 2026-10-03: T38 through T50 done except T46 (8-hour soak
+running in background, completes about 21:30 UTC) and owner-blocked
+items. T37 browser and on-device checks stay parked for a capable
+machine (this host has no usable browser, no phones, no Android
+SDK). Full suites green at each commit: client 131, server 67.
 
-## 1. Why parked
+## Done since T37
 
-This host has no usable browser (only an uninstalled snap stub, so
-`flutter test --platform chrome` cannot run) and no phones. Per owner
-instruction, browser and native app tasks wait for a capable machine.
+- T38 web sharing (wake lock, banner, 60 s hidden pause).
+- T39 iOS install hint. T40 settings plus about. T41 privacy
+  center with delete-my-data end-to-end. T42 privacy docs (policy,
+  terms, RIPD-lite, inventory).
+- T43 security review (`docs/security/review-alpha.md`, no open
+  P0/P1 in code). T44 budgets (`docs/field-tests/budgets.md`,
+  device items TODO). T45 release hardening (R8 flags,
+  allowBackup=false, release-android.yml).
+- T49 pilot kit. T50 ops runbooks plus a real kill-switch drill
+  on an isolated instance.
 
-## 2. Verify path on the other machine
+## Still owner-blocked (unchanged)
 
-1. `flutter analyze` clean in app/.
-2. `flutter test` passes in app/.
-3. Viewer widget tests on desktop Chrome
-   (`flutter test --platform chrome` with `CHROME_EXECUTABLE` set).
-4. Web release build compiles (`--no-web-resources-cdn --wasm`).
-5. iOS Safari plus Android Chrome smoke of map, list, timetables.
+Real route traces, Pages project/DNS/secrets, VPS
+provisioning/deploys (T04/T05, `server/deploy/` empty), owner DB
+role, staging E2E, real phones (T47), distribution (T48),
+lawyer/DPO review, controller contact (INFRA-23), data licence
+half of INFRA-19.
 
-## 3. Rules (when resumed)
+## Next
 
-- One logical change only. No T38 sharing work inside T37.
-- Docs English. No em dashes. Commit per task when green.
-
-## 4. Next
-
-T37 (web viewer parity on the other machine), then T38 (web sharing
-foreground only). Owner-blocked items unchanged: real route traces,
-Pages project/DNS/secrets, VPS provisioning/deploys, owner DB role,
-staging E2E, real phones.
+1. T46: collect the 8-hour soak result when it finishes.
+2. T37 + device TODOs on the other machine (browser widget runs,
+   web build smoke, AAB size, budgets table, merged manifest).
+3. Hand owner-blocked list to the owner.
