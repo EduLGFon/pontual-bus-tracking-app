@@ -569,6 +569,13 @@ PLAN.md 0.3).
   partial until the release AAB; AC16 partial until a gitleaks run
   (CI covers it per release); AC08 scale and AC06 relay need
   staging.
+- 2026-10-03: T44 partial. Measured ping wire size by curl trace
+  (0.62 KB per ping; leader ~0.15 MB/h at budget, follower ~0.025
+  MB/h inside) and web first load (JS 2.95 MB gz inside, wasm 3.08
+  MB gz ~3 % over). Wrote docs/field-tests/budgets.md. No Android
+  SDK on this host so no AAB/APK size; no phones so no
+  frame/RAM/CPU/battery/fps/latency numbers. All recorded as TODO
+  for the capable machine.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
