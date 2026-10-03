@@ -358,6 +358,11 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T18 done. App foundation: Material 3 tokens from PLAN 9.2,
+  pt-BR string table, go_router skeleton with all ten alpha routes as
+  placeholders. The 200 percent scale test caught a real welcome-screen
+  overflow; the screen scrolls now. Local verify: analyze clean, 3 widget
+  tests pass, manifest audit clean (go_router adds no permissions).
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

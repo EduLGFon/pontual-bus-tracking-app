@@ -1,7 +1,9 @@
-// T02 bootstrap. Runs the app immediately with bundled placeholders only.
+// T18 bootstrap. Runs the app immediately with bundled placeholders only.
 // No network call may block first paint. See PLAN.md 8.4.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pontual/app/router.dart';
+import 'package:pontual/app/theme.dart';
 
 void main() {
   runApp(const ProviderScope(child: PontualApp()));
@@ -14,9 +16,12 @@ class PontualApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp.router(
       title: 'Pontual',
-      home: Scaffold(body: Center(child: Text('Pontual'))),
+      theme: lightTheme(),
+      darkTheme: darkTheme(),
+      themeMode: ThemeMode.system,
+      routerConfig: buildRouter(),
     );
   }
 }

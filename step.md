@@ -1,37 +1,35 @@
-# step.md - Current step: T17 route tool
+# step.md - Current step: T18 app foundation
 
-Status: partial 2026-10-03 (tool done). Next: M3 client foundation (T18).
-Blocked: real route traces need owner field rides; Pages project, DNS, and
-secrets need the owner; VPS provisioning and deploys need the owner.
+Status: done 2026-10-03. Next: T19. Blocked: real route traces, Pages
+project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T17 is
+## 1. What T18 is
 
-PLAN.md section 16, Milestone M2. Deliverable: route tool with GPX/GeoJSON
-to encoded polyline plus route file loaded by the server.
+PLAN.md section 16, Milestone M3. Deliverable: theme tokens, light/dark,
+strings_pt.dart, router skeleton with all routes as placeholders.
 
 ## 2. Done 2026-10-03
 
-- Converter with 5 m simplification, 1000-point cap, 8 KB polyline budget.
-- Builder encodes routes into the bundle and manifest; server decodes.
-- Verified on synthetic traces with unit tests; 67 server tests pass.
+- Material 3 tokens, pt-BR strings, go_router with ten alpha routes.
+- Welcome copy final; other screens are placeholders.
+- Scale test caught and fixed a welcome overflow.
+- Verified: analyze clean, 3 widget tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T17)
+## 3. Acceptance criteria (from PLAN T18)
 
-- Polyline under 8 KB per line: met by construction and enforced by the tool.
+- Screens navigable; 200 percent text scale ok.
 
 ## 4. Verify
 
-1. `deno task route-test` and `data-test` pass in tools/.
-2. `deno task test` passes in server/.
+1. `flutter analyze` clean in app/.
+2. `flutter test` passes in app/.
 
 ## 5. Rules
 
-- One logical change only. No real traces committed.
-- Docs English. No em dashes. Commit: `feat: add route geometry tool (T17)`.
+- One logical change only. No business logic in widgets (T19 onward).
+- Docs English. No em dashes. Commit: `feat: add app foundation (T18)`.
 
 ## 6. Next
 
-M3 client foundation: T18 (theme tokens, light/dark, strings_pt, router
-skeleton), T19 (core utilities plus tests), T20-T23 (networking, API,
-static data, remote config). Backend M1 and data M2 are complete except
-owner-blocked deploys and traces.
+T19 (core/: Clock, Log, geo helpers, backoff, Result/failures, plus unit
+tests with 90 percent coverage on domain-adjacent pure code).
