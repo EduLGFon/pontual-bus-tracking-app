@@ -358,6 +358,10 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T29 done. Pure client trip domain: sealed TripState with a
+  total reducer, sampling policy with 30 s hysteresis, and auto-end policy
+  with priority order. Local verify: analyze clean, 62 client tests pass,
+  manifest audit clean.
 - 2026-10-03: T28 done. Map tab with live, stale, connecting, offline,
   and empty states, marker plus text-row vehicles, recenter button,
   non-pilot note, and route polyline support. Test lessons recorded:
