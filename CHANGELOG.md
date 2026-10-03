@@ -26,4 +26,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T20 net base done (keep-alive client plus token store plus on-demand registration).
 - T21 typed API done (DTOs plus error mapping plus fake and live contract tests).
 - T22 static repository done (bundled assets plus cache plus conditional GET plus atomic swap).
+- T23 remote flags done (config repository plus S13 screens plus S14 banner).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
