@@ -46,4 +46,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T42 privacy docs done (policy and terms drafts pt-BR, RIPD-lite, data inventory; lawyer review and contact still owner-blocked).
 - T43 security review done (docs/security/review-alpha.md; all suites green; no open P0/P1 in code; VPS, release-build, and browser items recorded as blocked).
 - T44 budgets measured where host allows (docs/field-tests/budgets.md; ping wire 0.62 KB, leader at budget, web JS path inside; AAB and on-device items TODO).
+- T45 release hardening done (R8 minify/shrink with stock keeps, allowBackup=false, audit script extended, release-android.yml with merged-manifest audit and AAB size gate; keystore and first tagged build owner-blocked).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

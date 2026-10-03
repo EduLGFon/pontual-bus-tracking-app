@@ -31,8 +31,17 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // R8 shrink + obfuscation. Stock keeps in proguard-rules.pro.
+            // Rollback: set both flags to false and rebuild.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // TODO(owner-keystore): replace debug signing with the release
+            // keystore from encrypted secrets before the first tag. Until
+            // then `flutter run --release` still works locally.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

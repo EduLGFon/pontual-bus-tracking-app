@@ -1,0 +1,60 @@
+# Release Android AAB on tags (T45). Builds the release bundle with
+# Dart obfuscation, audits the merged manifest, enforces the size
+# gate, and attaches the AAB to the GitHub release.
+#
+# Owner-blocked before the first tag: upload-signing keystore as
+# encrypted secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS,
+# ANDROID_KEY_PASSWORD, ANDROID_STORE_PASSWORD. Until then the
+# build uses debug signing and is install-test only.
+name: release-android
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.47.6
+      - name: Source manifest audit
+        run: bash tools/ci/manifest_audit.sh
+      - name: Build release AAB
+        working-directory: app
+        run: >
+          flutter build appbundle --release --obfuscate
+          --split-debug-info=build/debug-info
+      - name: Merged manifest audit
+        working-directory: app
+        run: |
+          MANIFEST=$(find build/app/outputs -name AndroidManifest.xml | head -1)
+          echo "merged manifest: $MANIFEST"
+          test -n "$MANIFEST"
+          ! grep -q "ACCESS_BACKGROUND_LOCATION" "$MANIFEST"
+          ! grep -q "RECEIVE_BOOT_COMPLETED" "$MANIFEST"
+          ! grep -q "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" "$MANIFEST"
+          ! grep -q "WAKE_LOCK" "$MANIFEST"
+          grep -q 'allowBackup="false"' "$MANIFEST"
+          grep -q "android:debuggable" "$MANIFEST" && exit 1 || true
+          echo "merged manifest audit: PASS"
+      - name: Size gate (AAB <= 15 MB)
+        working-directory: app
+        run: |
+          AAB=$(find build/app/outputs/bundle/release -name "*.aab" | head -1)
+          SIZE=$(stat -c%s "$AAB")
+          echo "AAB $AAB size $SIZE bytes"
+          test "$SIZE" -le 15728640
+      - name: Attach AAB to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release upload "${{ github.ref_name }}"
+          app/build/app/outputs/bundle/release/*.aab --clobber

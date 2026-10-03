@@ -30,6 +30,16 @@ for p in "${FORBIDDEN[@]}"; do
   fi
 done
 
+# AC15: no cloud backup of the token, no cleartext.
+if ! grep -q 'android:allowBackup="false"' "$MANIFEST_DIR/app/src/main/AndroidManifest.xml"; then
+  echo "allowBackup=false missing on the application tag"
+  fail=1
+fi
+if grep -rn --include="*.xml" 'android:usesCleartextTraffic="true"' "$MANIFEST_DIR" >/dev/null 2>&1; then
+  echo "cleartext traffic enabled"
+  fail=1
+fi
+
 echo "Declared permissions in source manifests:"
 grep -rhn --include="*.xml" "uses-permission" "$MANIFEST_DIR" || echo "(none in main source set; INTERNET only in debug/profile is expected)"
 
@@ -37,4 +47,4 @@ if [ "$fail" -ne 0 ]; then
   echo "manifest audit: FAIL"
   exit 1
 fi
-echo "manifest audit: PASS (source audit; full merged-manifest check lands in T45)"
+echo "manifest audit: PASS (source audit; merged-manifest check runs in release-android.yml)"

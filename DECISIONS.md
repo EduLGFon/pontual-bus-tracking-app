@@ -576,6 +576,16 @@ PLAN.md 0.3).
   SDK on this host so no AAB/APK size; no phones so no
   frame/RAM/CPU/battery/fps/latency numbers. All recorded as TODO
   for the capable machine.
+- 2026-10-03: T45 done as far as this host allows (no Android SDK,
+  so no AAB to inspect). In-tree: `allowBackup=false` on the
+  application tag (AC15, token cannot clone via cloud backup),
+  R8 `isMinifyEnabled` + `isShrinkResources` with stock
+  `proguard-rules.pro` (rollback documented in-file), audit script
+  now also fails on missing allowBackup and on cleartext, new
+  `release-android.yml` (tag build with --obfuscate, merged
+  manifest audit, AAB <= 15 MB gate, `gh release upload`, no new
+  third-party action). Owner-blocked: upload keystore secrets,
+  first tagged build plus install-launch, merged-manifest result.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
