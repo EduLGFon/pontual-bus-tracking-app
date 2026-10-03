@@ -358,6 +358,12 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T30 done. Consent sheet with the S06 copy, permission
+  education plus denied plus blocked plus services-off sheets with a
+  gateway interface for the T31 geolocator wiring, local consent
+  versioning, and an offline-tolerant consent flow that never starts a
+  trip uncovered. Local verify: analyze clean, 69 client tests pass,
+  manifest audit clean.
 - 2026-10-03: T29 done. Pure client trip domain: sealed TripState with a
   total reducer, sampling policy with 30 s hysteresis, and auto-end policy
   with priority order. Local verify: analyze clean, 62 client tests pass,

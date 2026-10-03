@@ -33,4 +33,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T27 vehicle stream done (snapshot plus socket plus watchdog plus polling fallback plus stop).
 - T28 map tab done (status states plus markers plus list rows plus recenter plus polyline).
 - T29 trip domain done (state machine plus sampling policy plus auto-end, all transitions covered).
+- T30 consent done (S06 sheet plus S07 sheets plus versioning plus offline-tolerant flow).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
