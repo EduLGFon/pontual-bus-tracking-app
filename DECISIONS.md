@@ -358,6 +358,10 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T24 done. Home screen with local search, cached line list,
+  and live indicators that fill in without spinners, wired through
+  Riverpod providers. Fixed asset manifest parsing to real JSON decode.
+  Local verify: analyze clean, 37 client tests pass, manifest audit clean.
 - 2026-10-03: T23 done. Remote flags repository with bundled defaults,
   daily refresh, and version comparison, plus S13 system screens for
   maintenance, update, and unreachable states and the S14 offline banner.

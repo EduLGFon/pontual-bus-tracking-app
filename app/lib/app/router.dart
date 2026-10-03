@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontual/app/strings_pt.dart';
+import 'package:pontual/features/home/home_screen.dart';
 
 /// Builds a placeholder scaffold with semantics labels in pt-BR.
 Widget placeholder(String title, String semanticsLabel) {
@@ -32,7 +33,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/',
         builder: (BuildContext context, GoRouterState state) {
-          return const HomePlaceholder();
+          return const HomeScreen();
         },
       ),
       GoRoute(
@@ -134,29 +135,6 @@ class WelcomePlaceholder extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Home screen skeleton.
-class HomePlaceholder extends StatelessWidget {
-  /// Creates the home skeleton.
-  const HomePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text(StringsPt.homeTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const <Widget>[
-          Text(StringsPt.homeSearchHint),
-          SizedBox(height: 12),
-          Text(StringsPt.homeAllLines),
-          SizedBox(height: 12),
-          Text(StringsPt.homeUnofficial),
-        ],
       ),
     );
   }
