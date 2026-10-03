@@ -291,6 +291,15 @@ PLAN.md 0.3).
   never re-picked while a live follower waits. Engine unit tests 1-18 and
   20-24 pass (23 tests); test 19 restarts lands in T11. Full suite is 40
   tests green with fmt, lint, and check clean.
+- 2026-10-02: T10 done. Trip endpoints wired to the engine: POST /v1/trip
+  with line, consent, blocklist, kill-switch, quota, and capacity checks;
+  POST /v1/trip/ping with jittered follower intervals; DELETE /v1/trip
+  idempotent. Line registry resolves from injected data; the file loader
+  lands with the T14 bundle, so production returns 404 line until then.
+  Quota is consumed only by known lines. RF16 walking hint deferred to the
+  client auto-end work. Local verify: 46 tests pass covering AC02, AC07,
+  AC09, AC10, AC14; live register plus consent plus start plus ping plus
+  delete flow verified via curl.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

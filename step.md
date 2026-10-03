@@ -1,21 +1,20 @@
-# step.md - Current step: T09 pure engine
+# step.md - Current step: T10 trip endpoints
 
-Status: done 2026-10-02. Next: T10. T04 and T05 blocked on owner infra answers.
+Status: done 2026-10-02. Next: T11. T04 and T05 blocked on owner infra answers.
 
-## 1. What T09 is
+## 1. What T10 is
 
-PLAN.md section 16, Milestone M1. Deliverable: pure engine with geo helpers, validation, plausibility, startTrip, applyPing (attach, coherence, idle, roles, hand-over), endTrip, tick, snapshot builder, in-memory store, event bus.
+PLAN.md section 16, Milestone M1. Deliverable: trip endpoints (POST /v1/trip, /v1/trip/ping, DELETE /v1/trip) wired to the engine with quotas, capacity, resume, kill switch.
 
 ## 2. Done 2026-10-02
 
-- Domain files: types, geo, validate, attach, election, ping, tick, snapshot. Store in state/store.ts.
-- Engine tests 1-18 and 20-24 pass (23 tests, fake clock, deterministic).
-- Full suite 40 tests green; fmt, lint, check clean.
-- Dead-leader replacement prefers fresh members (recorded in DECISIONS.md).
+- Trip schemas plus routes plus line resolver stub.
+- Tests for AC02, AC07, AC09, AC10, AC14.
+- Verified: 46 tests pass, fmt/lint/check clean, live flow via curl.
 
-## 3. Acceptance criteria (from PLAN T09)
+## 3. Acceptance criteria (from PLAN T10)
 
-- Engine unit tests 1-18, 20-24 pass.
+- AC02, AC07, AC09, AC10, AC14 pass.
 
 ## 4. Verify
 
@@ -24,9 +23,9 @@ PLAN.md section 16, Milestone M1. Deliverable: pure engine with geo helpers, val
 
 ## 5. Rules
 
-- One logical change only. No HTTP wiring (T10) or jobs (T11).
-- Docs English. No em dashes. Commit: `feat: add pure trip engine (T09)`.
+- One logical change only. No tick jobs (T11) or read endpoints (T12).
+- Docs English. No em dashes. Commit: `feat: add trip endpoints (T10)`.
 
 ## 6. Next
 
-T10 (trip endpoints POST /v1/trip, /v1/trip/ping, DELETE /v1/trip wired to the engine with quotas, capacity, resume, kill switch).
+T11 (tick job and background jobs: tick, config refresh, device purge, db health, with overlap guard).

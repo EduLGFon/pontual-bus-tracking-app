@@ -2,8 +2,10 @@
 // HTTP-level tests run the real app in-process against test PostgreSQL.
 // See PLAN.md 12.6.
 import { assert, assertEquals } from "@std/assert";
+import { registryResolver } from "../src/data/lines.ts";
 import { openDb } from "../src/db/client.ts";
 import { buildApp } from "../src/http/app.ts";
+import { createStore } from "../src/state/store.ts";
 import { findDeviceByTokenHash } from "../src/db/devices.ts";
 import { tokenHash } from "../src/security/token.ts";
 
@@ -26,6 +28,9 @@ function app() {
   const sql = openDb(testDbUrl());
   const hono = buildApp({
     sql,
+    store: createStore(),
+    lines: registryResolver([{ id: 7, isActive: true, route: null }]),
+    followerJitterS: 0,
     trustCloudflare: false,
     allowedOrigins: ["http://127.0.0.1:8080"],
   });

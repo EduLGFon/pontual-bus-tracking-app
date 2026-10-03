@@ -5,10 +5,16 @@ import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
 import { recordHealthCheck, recordRequest } from "../observability/metrics.ts";
 import { clientIp } from "../security/clientIp.ts";
+import type { LineResolver } from "../data/lines.ts";
+import type { Store } from "../state/store.ts";
 import { buildAccountRoutes } from "./routes.ts";
+import { buildTripRoutes } from "./tripRoutes.ts";
 
 export interface AppOptions {
   sql: Sql | null;
+  store: Store | null;
+  lines: LineResolver;
+  followerJitterS: number;
   trustCloudflare: boolean;
   allowedOrigins: string[];
 }
@@ -65,6 +71,17 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
 
   if (opts.sql) {
     app.route("/", buildAccountRoutes(opts.sql));
+  }
+  if (opts.sql && opts.store) {
+    app.route(
+      "/",
+      buildTripRoutes({
+        sql: opts.sql,
+        store: opts.store,
+        lines: opts.lines,
+        followerJitterS: opts.followerJitterS,
+      }),
+    );
   }
 
   app.notFound((c) => c.json({ code: "not_found" }, 404));

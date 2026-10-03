@@ -1,10 +1,12 @@
 // Bootstrap: config, HTTP server, internal metrics listener, shutdown.
 // See PLAN.md 6.2, 6.9, 6.10.
 import { loadConfig } from "./config/config.ts";
+import { registryResolver } from "./data/lines.ts";
 import { openDb } from "./db/client.ts";
 import { buildApp } from "./http/app.ts";
 import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
+import { createStore } from "./state/store.ts";
 
 function readEnv(): Record<string, string | undefined> {
   const names = [
@@ -27,8 +29,13 @@ const config = loadConfig(readEnv());
 setLogLevel(config.logLevel);
 
 const sql = openDb(config.databaseUrl);
+// Line registry loads from the built bundle in T14; empty until then.
+const lines = registryResolver([]);
 const app = buildApp({
   sql,
+  store: createStore(),
+  lines,
+  followerJitterS: 10,
   trustCloudflare: config.trustCloudflare,
   allowedOrigins: config.allowedOrigins,
 });

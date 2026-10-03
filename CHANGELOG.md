@@ -13,4 +13,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T07 database done (migration 0001, repositories, runtime config loader, no_location_at_rest, CI postgres plus dbmate).
 - T08 security middleware done (Valibot 1.5.0, token auth, device plus consent plus delete routes, AC01 plus AC03 plus AC11 plus AC13 plus AC18 plus AC23).
 - T09 pure engine done (attach plus election plus tick plus snapshot, tests 1-18 and 20-24).
+- T10 trip endpoints done (start plus ping plus delete, quotas plus resume plus kill switch, AC02 plus AC07 plus AC09 plus AC10 plus AC14).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

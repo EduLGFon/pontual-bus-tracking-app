@@ -1,8 +1,16 @@
 import { assertEquals } from "@std/assert";
+import { registryResolver } from "../src/data/lines.ts";
 import { buildApp } from "../src/http/app.ts";
 
 function testApp() {
-  return buildApp({ sql: null, trustCloudflare: false, allowedOrigins: [] });
+  return buildApp({
+    sql: null,
+    store: null,
+    lines: registryResolver([]),
+    followerJitterS: 0,
+    trustCloudflare: false,
+    allowedOrigins: [],
+  });
 }
 
 Deno.test("GET /v1/health returns ok", async () => {
