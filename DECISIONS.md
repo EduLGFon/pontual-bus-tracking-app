@@ -596,6 +596,14 @@ PLAN.md 0.3).
   pre-switch start 201, post-switch start and ping `503 maint`
   inside the 30 s refresh, reads 200 throughout, rollback to 201.
   Drill DB dropped afterwards. Next drill on the VPS after T04/T05.
+- 2026-10-03: T05 files authored (repo side). `pontual.service`
+  carries the 12.8 sandbox (verified structurally with
+  systemd-analyze; only the VPS deno path is absent here) and
+  `deploy.sh` implements tag unpack, checksum, migrate, symlink
+  swap, restart, health gate, and rollback. T04 hardening steps
+  drafted in `docs/runbooks/vps-hardening.md`. Owner-blocked: all
+  VPS execution, upload keystore, uptime-monitor service choice
+  (INFRA-10), first deploy and rollback run.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam

@@ -49,4 +49,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T45 release hardening done (R8 minify/shrink with stock keeps, allowBackup=false, audit script extended, release-android.yml with merged-manifest audit and AAB size gate; keystore and first tagged build owner-blocked).
 - T49 pilot kit done (docs/field-tests/pilot-kit.md; organizer contact still owner-blocked).
 - T50 ops runbooks done (docs/runbooks/ops.md; kill-switch drill executed on an isolated local instance with readings intact).
+- T05 deploy files done (server/deploy/pontual.service with the 12.8 sandbox, deploy.sh with checksum plus migrate plus health-gated swap plus rollback; keystore, uptime-monitor service, and first VPS run owner-blocked).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).
