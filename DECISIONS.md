@@ -523,6 +523,12 @@ PLAN.md 0.3).
   fallback fonts until the S4 font issue is resolved. Verified: full
   client suite green (107 passed), analyze clean, both builds compile.
   Owner-blocked deploy (Pages project, DNS, secrets) unchanged.
+- 2026-10-03: T37 parked. Browser and on-device checks move to another
+  machine (owner todo): this host has no usable browser (only a snap
+  stub; flutter test needs a real Chrome) and no phones. Desktop-Chrome
+  widget runs plus the shipping web build stay the verify path there.
+  Viewer code itself is platform-clean (one conditional import, no
+  dart:io in features).
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 
