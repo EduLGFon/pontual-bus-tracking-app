@@ -282,6 +282,15 @@ PLAN.md 0.3).
   registration caps plus per-device consents and delete caps. Local verify:
   17 tests pass covering AC01, AC03, AC11, AC13, AC18, AC23; live boot
   register plus consent plus delete plus 401 paths verified via curl.
+- 2026-10-02: T09 done. Pure engine per PLAN 6.6: geo helpers, validation,
+  attach-at-ping with dead reckoning, election, startTrip plus applyPing
+  plus endTrip, tick, snapshot builder, in-memory store. Jitter and time are
+  parameters, no I/O or clock in domain. One refinement vs the literal text:
+  dead-leader replacement prefers a fresh member (inside
+  leader_dead_after_s) and falls back to all members, so a dead leader is
+  never re-picked while a live follower waits. Engine unit tests 1-18 and
+  20-24 pass (23 tests); test 19 restarts lands in T11. Full suite is 40
+  tests green with fmt, lint, and check clean.
 
 ## 6. Owner answers round 1 (2026-10-02, Accepted)
 

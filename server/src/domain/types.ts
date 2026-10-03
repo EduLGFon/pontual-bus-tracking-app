@@ -1,0 +1,126 @@
+// Pure domain types. No I/O, no clock, no imports outside domain/.
+// See PLAN.md 6.6. Time is always a parameter (nowMs).
+
+export type Role = "L" | "F" | "W";
+export type EndReason = "idle" | "timeout" | "max_duration" | "abuse" | "user";
+
+export interface Fix {
+  lat: number;
+  lng: number;
+  speedMps: number;
+  heading: number | null;
+  accuracyM: number;
+  batteryPct: number;
+  charging: boolean;
+  seq: number;
+  role: Role;
+}
+
+export interface Trip {
+  deviceId: string;
+  lineId: number;
+  vehicleId: number | null;
+  startedAtMs: number;
+  lastSeenAtMs: number | null;
+  seq: number;
+  lat: number;
+  lng: number;
+  speedMps: number;
+  heading: number | null;
+  accuracyM: number;
+  batteryPct: number;
+  charging: boolean;
+  role: Role;
+  movingTicks: number;
+  stillTicks: number;
+  coherenceFail: number;
+  strikes: number;
+  anchor: { lat: number; lng: number; atMs: number } | null;
+  ledS: number;
+  offRoute: boolean;
+}
+
+export interface Vehicle {
+  id: number;
+  lineId: number;
+  lat: number;
+  lng: number;
+  heading: number | null;
+  speedMps: number;
+  fixAtMs: number;
+  leaderDeviceId: string | null;
+  nextLeaderDeviceId: string | null;
+  lastElectAtMs: number;
+  updatedAtMs: number;
+}
+
+/** Tunables used by the engine. Defaults mirror PLAN.md 6.3. */
+export interface EngineConfig {
+  bbox: { latMin: number; latMax: number; lngMin: number; lngMax: number };
+  accuracyMaxM: number;
+  speedMaxMps: number;
+  teleportSpeedMps: number;
+  teleportMinM: number;
+  strikesToEnd: number;
+  routeMaxDistM: number;
+  attachBaseTolM: number;
+  attachSpeedFactor: number;
+  attachTolMaxM: number;
+  coherenceFailsToDetach: number;
+  movingSpeedMps: number;
+  movingTicksToPublish: number;
+  leaderIntervalMovingS: number;
+  leaderIntervalStillS: number;
+  followerIntervalS: number;
+  waitingIntervalS: number;
+  leaderDeadAfterS: number;
+  memberAliveS: number;
+  publishTtlS: number;
+  reelectEveryS: number;
+  leaderMinBattery: number;
+  idleDisplacementM: number;
+  idleEndAfterS: number;
+  tripTimeoutS: number;
+  tripMaxS: number;
+  minPingIntervalS: number;
+  tickPeriodS: number;
+  maxActiveTrips: number;
+}
+
+export function defaultEngineConfig(): EngineConfig {
+  return {
+    bbox: { latMin: -19.05, latMax: -18.4, lngMin: -40.25, lngMax: -39.55 },
+    accuracyMaxM: 60,
+    speedMaxMps: 25,
+    teleportSpeedMps: 30,
+    teleportMinM: 200,
+    strikesToEnd: 5,
+    routeMaxDistM: 300,
+    attachBaseTolM: 80,
+    attachSpeedFactor: 0.5,
+    attachTolMaxM: 400,
+    coherenceFailsToDetach: 2,
+    movingSpeedMps: 3,
+    movingTicksToPublish: 2,
+    leaderIntervalMovingS: 15,
+    leaderIntervalStillS: 30,
+    followerIntervalS: 90,
+    waitingIntervalS: 20,
+    leaderDeadAfterS: 45,
+    memberAliveS: 300,
+    publishTtlS: 120,
+    reelectEveryS: 300,
+    leaderMinBattery: 15,
+    idleDisplacementM: 50,
+    idleEndAfterS: 600,
+    tripTimeoutS: 600,
+    tripMaxS: 14400,
+    minPingIntervalS: 4,
+    tickPeriodS: 5,
+    maxActiveTrips: 300,
+  };
+}
+
+export type EngineEvent =
+  | { kind: "vehicleUpdated"; lineId: number }
+  | { kind: "tripEnded"; lineId: number; reason: EndReason };
