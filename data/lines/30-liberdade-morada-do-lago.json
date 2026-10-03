@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 30,
+  "code": "30-liberdade-morada-do-lago",
+  "short": "30",
+  "name": "Liberdade / Morada do Lago",
+  "terminals": [
+    "Liberdade",
+    "Morada do Lago"
+  ],
+  "area_tags": [
+    "Liberdade",
+    "Morada do Lago"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 23,
+  "code": "23-santo-antonio-guriri-expresso",
+  "short": "23",
+  "name": "Santo Antônio / Guriri / Expresso",
+  "terminals": [
+    "Santo Antônio",
+    "Guriri"
+  ],
+  "area_tags": [
+    "Santo Antônio",
+    "Guriri"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

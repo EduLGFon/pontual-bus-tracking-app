@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 120,
+  "code": "120-ayrton-senna-roberto-silvares",
+  "short": "120",
+  "name": "Ayrton Senna / Roberto Silvares",
+  "terminals": [
+    "Ayrton Senna",
+    "Roberto Silvares"
+  ],
+  "area_tags": [
+    "Ayrton Senna",
+    "Roberto Silvares"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

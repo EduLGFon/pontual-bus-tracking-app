@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 90,
+  "code": "90-porto-pedra-dagua",
+  "short": "90",
+  "name": "Porto / Pedra d'Água",
+  "terminals": [
+    "Porto",
+    "Pedra d'Água"
+  ],
+  "area_tags": [
+    "Porto",
+    "Pedra d'Água"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

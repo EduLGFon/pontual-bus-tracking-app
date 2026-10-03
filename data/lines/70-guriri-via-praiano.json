@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 70,
+  "code": "70-guriri-via-praiano",
+  "short": "70",
+  "name": "Guriri via Praiano",
+  "terminals": [
+    "Guriri",
+    "Praiano"
+  ],
+  "area_tags": [
+    "Guriri",
+    "Praiano"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

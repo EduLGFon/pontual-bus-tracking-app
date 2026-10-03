@@ -18,4 +18,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T12 reads and stream done (vehicles snapshot plus ETag, live lines, WS hub with caps plus heartbeat plus bye, AC05 plus AC06 plus AC08).
 - T13 simulator done (buses plus riders plus abuse plus latency report, immediate position broadcast, CI smoke).
 - T14 data pipeline done (JSON Schemas plus validator plus builder plus bundle loader plus CI data job).
+- T15 line seed done (21 urban lines, 4 pilots with timetables, sources recorded).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 41,
+  "code": "41-santa-tereza-pedra-dagua",
+  "short": "41",
+  "name": "Santa Tereza / Pedra d'Água",
+  "terminals": [
+    "Santa Tereza",
+    "Pedra d'Água"
+  ],
+  "area_tags": [
+    "Santa Tereza",
+    "Pedra d'Água"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

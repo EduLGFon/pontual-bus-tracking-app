@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 13,
+  "code": "13-aroeira-cohab",
+  "short": "13",
+  "name": "Aroeira / Cohab",
+  "terminals": [
+    "Aroeira",
+    "Cohab"
+  ],
+  "area_tags": [
+    "Aroeira",
+    "Cohab"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

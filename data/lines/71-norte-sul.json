@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 71,
+  "code": "71-norte-sul",
+  "short": "71",
+  "name": "Norte Sul",
+  "terminals": [
+    "Norte",
+    "Sul"
+  ],
+  "area_tags": [
+    "Norte",
+    "Sul"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

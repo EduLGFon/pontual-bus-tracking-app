@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 50,
+  "code": "50-seac-alvorada",
+  "short": "50",
+  "name": "Seac / Alvorada",
+  "terminals": [
+    "Seac",
+    "Alvorada"
+  ],
+  "area_tags": [
+    "Seac",
+    "Alvorada"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "id": 66,
+  "code": "66-centro-ifes-ufes",
+  "short": "66",
+  "name": "Centro / IFES / UFES",
+  "terminals": [
+    "Centro",
+    "IFES / UFES"
+  ],
+  "area_tags": [
+    "Centro",
+    "IFES / UFES"
+  ],
+  "is_active": true,
+  "pilot": true,
+  "schedules": [
+    {
+      "day_type": "weekday",
+      "origin": "Centro",
+      "times": [
+        "06:40",
+        "07:20",
+        "08:00",
+        "08:40",
+        "09:20",
+        "10:00",
+        "10:40",
+        "11:20",
+        "12:00",
+        "12:40",
+        "13:20",
+        "14:00",
+        "14:40",
+        "15:20",
+        "16:00",
+        "16:40",
+        "17:20",
+        "18:00",
+        "18:40"
+      ]
+    },
+    {
+      "day_type": "weekday",
+      "origin": "IFES / UFES",
+      "times": [
+        "07:20",
+        "08:00",
+        "08:40",
+        "09:20",
+        "10:00",
+        "10:40",
+        "11:20",
+        "12:00",
+        "12:40",
+        "13:20",
+        "13:50",
+        "14:40",
+        "15:20",
+        "16:00",
+        "16:40",
+        "17:20",
+        "18:00",
+        "18:40"
+      ]
+    }
+  ],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

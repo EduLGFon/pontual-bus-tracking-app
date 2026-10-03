@@ -320,6 +320,14 @@ PLAN.md 0.3).
   T15. CI has a data job with fmt, lint, tool tests, validation, build,
   and a size-budget gate. Local verify: tool tests pass, empty set builds,
   bundle-backed endpoints serve live.
+- 2026-10-03: T15 done. All 21 urban lines seeded from onibus.online
+  (retrieved 2026-10-03): 4 pilot lines (60, 62, 64, 66) with transcribed
+  weekday timetables plus Sat and Sun where published, 17 names-only lines
+  with pilot false. Ids are the official line numbers; the two 62 variants
+  share one id until route geometry decides otherwise. Stripped itinerary
+  digits and collapsed duplicate minutes are recorded in data/sources.md
+  with VERIFY flags. Validator passes, bundle is 8.6 KB, trip start on a
+  bundle line verified live.
 - 2026-10-02: T12 done. Public reads plus stream: GET
   /v1/lines/{id}/vehicles with ETag, 304, and 5 s edge cache headers; GET
   /v1/live with 10 s headers; read-only hub with per-IP and global caps,

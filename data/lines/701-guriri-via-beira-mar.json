@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 701,
+  "code": "701-guriri-via-beira-mar",
+  "short": "701",
+  "name": "Guriri via Beira Mar",
+  "terminals": [
+    "Guriri",
+    "Beira Mar"
+  ],
+  "area_tags": [
+    "Guriri",
+    "Beira Mar"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

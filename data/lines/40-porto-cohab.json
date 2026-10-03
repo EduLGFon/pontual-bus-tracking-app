@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 40,
+  "code": "40-porto-cohab",
+  "short": "40",
+  "name": "Porto / Cohab",
+  "terminals": [
+    "Porto",
+    "Cohab"
+  ],
+  "area_tags": [
+    "Porto",
+    "Cohab"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

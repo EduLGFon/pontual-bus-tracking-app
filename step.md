@@ -1,34 +1,34 @@
-# step.md - Current step: T14 static data pipeline
+# step.md - Current step: T15 line seed
 
-Status: done 2026-10-03. Next: T15. T04 and T05 blocked on owner infra answers.
+Status: done 2026-10-03. Next: T16. T04 and T05 blocked on owner infra answers.
 
-## 1. What T14 is
+## 1. What T15 is
 
-PLAN.md section 16, Milestone M2. Deliverable: JSON Schema plus validator plus builder (lines hash file, manifest.json, config.json, server data bundle).
+PLAN.md section 16, Milestone M2. Deliverable: seed pilot lines (owner set
+D25) and list all 21 urban line names with data/sources.md.
 
 ## 2. Done 2026-10-03
 
-- Schemas in data/schema/ for line, manifest, and config files.
-- Validator plus builder in tools/data with schema-driven structure checks and semantic checks.
-- Server bundle loader with LINES_JSON fallback.
-- CI data job with fmt, lint, tests, validation, build, size gate.
-- Verified: tool tests pass, empty set builds within budget, bundle endpoints serve live, 66 server tests pass.
+- 21 line files in data/lines/, 4 pilot with timetables, 17 names-only.
+- Sources recorded with VERIFY flags.
+- Verified: validator passes, bundle 8.6 KB, trip start on bundle line live.
 
-## 3. Acceptance criteria (from PLAN T14)
+## 3. Acceptance criteria (from PLAN T15)
 
-- CI validates; size under 100 KB.
+- Validator passes; sources recorded.
 
 ## 4. Verify
 
-1. `deno task data-test`, `data-validate`, `data-build` pass in tools/.
-2. `deno task test` passes in server/.
-3. Bundle endpoints serve the built data.
+1. `deno task data-validate` passes in tools/.
+2. Bundle builds within budget.
 
 ## 5. Rules
 
-- One logical change only. No line content (T15) or Pages deploy (T16).
-- Docs English. No em dashes. Commit: `feat: add static data pipeline (T14)`.
+- One logical change only. No Pages deploy (T16) or route geometry (T17).
+- Docs English. No em dashes. Commit: `feat: seed urban lines (T15)`.
 
 ## 6. Next
 
-T15 (seed pilot lines per D25 plus list all 21 urban line names with sources). Needs timetable research from public sources; route traces need owner rides (T17 may block on that).
+T16 (Cloudflare Pages deploy of build/ plus _headers). Needs Cloudflare
+account and DNS decisions (INFRA-05, INFRA-06); if blocked, continue with
+T17 tool (route geometry code) while route traces await owner field rides.

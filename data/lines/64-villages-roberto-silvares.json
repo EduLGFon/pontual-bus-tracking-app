@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "id": 64,
+  "code": "64-villages-roberto-silvares",
+  "short": "64",
+  "name": "Villages / Roberto Silvares",
+  "terminals": [
+    "Villages",
+    "Roberto Silvares"
+  ],
+  "area_tags": [
+    "Villages",
+    "Roberto Silvares"
+  ],
+  "is_active": true,
+  "pilot": true,
+  "schedules": [
+    {
+      "day_type": "weekday",
+      "origin": "Villages",
+      "times": [
+        "05:50",
+        "06:30",
+        "07:20",
+        "08:20",
+        "09:20",
+        "10:20",
+        "11:20",
+        "12:20",
+        "13:20",
+        "14:20",
+        "15:20",
+        "16:20",
+        "17:20",
+        "18:20",
+        "19:20",
+        "21:20"
+      ]
+    },
+    {
+      "day_type": "weekday",
+      "origin": "Roberto Silvares",
+      "times": [
+        "06:30",
+        "07:20",
+        "08:20",
+        "09:20",
+        "10:20",
+        "11:20",
+        "12:20",
+        "13:20",
+        "14:20",
+        "15:20",
+        "16:20",
+        "17:20",
+        "18:20",
+        "19:20",
+        "20:20",
+        "21:10",
+        "22:30"
+      ]
+    },
+    {
+      "day_type": "saturday",
+      "origin": "Villages",
+      "times": [
+        "05:50",
+        "06:30",
+        "07:20",
+        "08:20",
+        "09:20",
+        "10:20",
+        "11:20",
+        "12:20",
+        "13:20",
+        "15:20",
+        "17:20",
+        "19:20",
+        "21:20"
+      ]
+    },
+    {
+      "day_type": "saturday",
+      "origin": "Roberto Silvares",
+      "times": [
+        "06:30",
+        "07:20",
+        "08:20",
+        "09:20",
+        "10:20",
+        "11:20",
+        "12:20",
+        "13:20",
+        "14:20",
+        "16:20",
+        "18:20",
+        "20:20",
+        "21:10",
+        "22:30"
+      ]
+    },
+    {
+      "day_type": "sunday_holiday",
+      "origin": "Villages",
+      "times": [
+        "05:50",
+        "07:20",
+        "09:20",
+        "11:20",
+        "13:20",
+        "15:20",
+        "17:20",
+        "19:20",
+        "21:20"
+      ]
+    },
+    {
+      "day_type": "sunday_holiday",
+      "origin": "Roberto Silvares",
+      "times": [
+        "06:30",
+        "08:20",
+        "10:20",
+        "12:20",
+        "14:20",
+        "16:20",
+        "18:20",
+        "20:20",
+        "22:30"
+      ]
+    }
+  ],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

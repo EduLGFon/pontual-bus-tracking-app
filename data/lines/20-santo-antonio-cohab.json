@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 20,
+  "code": "20-santo-antonio-cohab",
+  "short": "20",
+  "name": "Santo Antônio / Cohab",
+  "terminals": [
+    "Santo Antônio",
+    "Cohab"
+  ],
+  "area_tags": [
+    "Santo Antônio",
+    "Cohab"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

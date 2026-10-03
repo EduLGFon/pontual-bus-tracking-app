@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 10,
+  "code": "10-aroeira-morada-do-ribeirao",
+  "short": "10",
+  "name": "Aroeira / Morada do Ribeirão",
+  "terminals": [
+    "Aroeira",
+    "Morada do Ribeirão"
+  ],
+  "area_tags": [
+    "Aroeira",
+    "Morada do Ribeirão"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}

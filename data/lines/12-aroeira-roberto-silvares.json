@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": 12,
+  "code": "12-aroeira-roberto-silvares",
+  "short": "12",
+  "name": "Aroeira / Roberto Silvares",
+  "terminals": [
+    "Aroeira",
+    "Roberto Silvares"
+  ],
+  "area_tags": [
+    "Aroeira",
+    "Roberto Silvares"
+  ],
+  "is_active": true,
+  "pilot": false,
+  "schedules": [],
+  "source_ids": [
+    "onibus-online"
+  ],
+  "verified_at": null
+}
