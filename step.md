@@ -1,24 +1,23 @@
-# step.md - Current step: T27 vehicle stream
+# step.md - Current step: T28 map tab
 
-Status: done 2026-10-03. Next: T28. Blocked: real route traces, Pages
-project/DNS/secrets, VPS provisioning/deploys need the owner.
+Status: done 2026-10-03. Next: M5 trip sharing (T29). Blocked: real route
+traces, Pages project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T27 is
+## 1. What T28 is
 
-PLAN.md section 16, Milestone M4. Deliverable: VehicleRepository with
-snapshot, WebSocket stream, watchdog, polling fallback, lifecycle.
+PLAN.md section 16, Milestone M4. Deliverable: S04 Mapa tab with markers,
+list rows, status row states, recenter, route polyline.
 
 ## 2. Done 2026-10-03
 
-- Repository with injectable fetcher, channel, clock, launcher.
-- Fake channel tests for snapshot, stream, watchdog, polling, stop, ages.
-- Verified: analyze clean, 51 tests pass, manifest audit clean.
+- MapTab with all status states, markers, TalkBack rows, recenter FAB,
+  non-pilot note, share entry point, polyline support.
+- LineScreen wires the real map tab with the tile URL provider.
+- Verified: analyze clean, 55 tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T27)
+## 3. Acceptance criteria (from PLAN T28)
 
-- Tests per 15.3; reconnect works with airplane toggle. Airplane-toggle
-  behavior follows from socket-down plus polling plus resync paths covered
-  here; field verification lands in T47.
+- All states reachable in widget tests; TalkBack reads vehicle list.
 
 ## 4. Verify
 
@@ -27,10 +26,12 @@ snapshot, WebSocket stream, watchdog, polling fallback, lifecycle.
 
 ## 5. Rules
 
-- One logical change only. No map tab UI (T28).
-- Docs English. No em dashes. Commit: `feat: add vehicle stream (T27)`.
+- One logical change only. No trip sharing logic (M5).
+- Docs English. No em dashes. Commit: `feat: add map tab (T28)`.
 
 ## 6. Next
 
-T28 (S04 Mapa tab: markers, list rows, status row states, recenter,
-route polyline).
+M5 trip sharing on Android: T29 (domain trip state machine plus policies
+plus tests), T30 (consent plus permission flows), T31 (LocationService),
+T32 (PingClient), T33 (TripController plus trip screen), T34 (auto-end
+plus offline saver), T35 (two-device test).

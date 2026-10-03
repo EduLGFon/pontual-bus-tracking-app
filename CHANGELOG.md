@@ -31,4 +31,5 @@ Format: Keep a Changelog. Versioning: `0.1.0-alpha.N` for alpha builds.
 - T25 timetables done (day types plus origin selector plus next departure plus disclaimer).
 - T26 map widget done (TileSource seam plus capped cache plus bounds plus attribution).
 - T27 vehicle stream done (snapshot plus socket plus watchdog plus polling fallback plus stop).
+- T28 map tab done (status states plus markers plus list rows plus recenter plus polyline).
 - Recorded owner answers round 1 in DECISIONS.md (D22-D28).

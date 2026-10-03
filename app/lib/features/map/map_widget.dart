@@ -3,6 +3,7 @@
 // See PLAN.md 8.9 and S3 results.
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:pontual/features/map/tile_source.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,6 +17,7 @@ class PontualMap extends StatelessWidget {
   const PontualMap({
     required this.center,
     required this.tileUrlTemplate,
+    this.httpClient,
     super.key,
   });
 
@@ -24,6 +26,9 @@ class PontualMap extends StatelessWidget {
 
   /// Tile URL template from remote config.
   final String tileUrlTemplate;
+
+  /// Test-only HTTP client for tiles. Null uses the real network.
+  final http.Client? httpClient;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +43,7 @@ class PontualMap extends StatelessWidget {
           backgroundColor: Theme.of(context).colorScheme.surface,
         ),
         children: <Widget>[
-          osmTileLayer(tileUrlTemplate),
+          osmTileLayer(tileUrlTemplate, httpClient: httpClient),
           RichAttributionWidget(
             attributions: <SourceAttribution>[
               TextSourceAttribution(

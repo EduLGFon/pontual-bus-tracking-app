@@ -2,6 +2,7 @@
 // capped at 50 MB live behind this seam so a self-hosted backend can
 // replace the URL without touching widgets. See PLAN.md D12 and S3.
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 /// Real application identifier sent as the tile User-Agent.
@@ -23,12 +24,18 @@ const double mapMinZoom = 12;
 /// Maximum zoom.
 const double mapMaxZoom = 17;
 
-/// Builds the OSM tile layer for [tileUrlTemplate].
-TileLayer osmTileLayer(String tileUrlTemplate, {MapCachingProvider? caching}) {
+/// Builds the OSM tile layer for [tileUrlTemplate]. Pass [httpClient] in
+/// tests to avoid real network traffic.
+TileLayer osmTileLayer(
+  String tileUrlTemplate, {
+  MapCachingProvider? caching,
+  http.Client? httpClient,
+}) {
   return TileLayer(
     urlTemplate: tileUrlTemplate,
     userAgentPackageName: tileUserAgent,
     tileProvider: NetworkTileProvider(
+      httpClient: httpClient,
       cachingProvider:
           caching ??
           BuiltInMapCachingProvider.getOrCreateInstance(

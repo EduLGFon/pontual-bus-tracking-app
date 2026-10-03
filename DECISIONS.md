@@ -358,6 +358,13 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T28 done. Map tab with live, stale, connecting, offline,
+  and empty states, marker plus text-row vehicles, recenter button,
+  non-pilot note, and route polyline support. Test lessons recorded:
+  widget teardown needs pump-flushed disposal in FakeAsync, and the
+  watchdog correctly heals staleness so the stale test fails its fetcher.
+  Also fixed a live-with-zero-vehicles crash in the status row. Local
+  verify: analyze clean, 55 client tests pass, manifest audit clean.
 - 2026-10-03: T27 done. Vehicle stream repository with snapshot-first
   start, read-only socket, 45 s watchdog resync, 30 s polling fallback,
   and clean background stop, all on an injectable clock and fake channel.

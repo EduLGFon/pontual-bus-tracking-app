@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontual/app/providers.dart';
 import 'package:pontual/data/static_data/static_data.dart';
+import 'package:pontual/features/line/map_tab.dart';
 import 'package:pontual/features/line/schedule_tab.dart';
 
 /// Line screen for the line id in the route parameters.
@@ -33,6 +34,7 @@ class LineScreen extends ConsumerWidget {
           );
         }
         final StaticLine line = found;
+        final AsyncValue<String> tileUrl = ref.watch(tileUrlProvider);
         return DefaultTabController(
           length: 2,
           child: Scaffold(
@@ -48,7 +50,14 @@ class LineScreen extends ConsumerWidget {
             ),
             body: TabBarView(
               children: <Widget>[
-                const Center(child: Text('Mapa em construção.')),
+                tileUrl.when(
+                  data: (String url) => MapTab(line: line, tileUrl: url),
+                  loading: () => const Center(child: Text('Conectando…')),
+                  error: (_, _) => MapTab(
+                    line: line,
+                    tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  ),
+                ),
                 ScheduleTab(line: line, now: DateTime.now()),
               ],
             ),

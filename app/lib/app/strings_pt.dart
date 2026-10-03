@@ -59,6 +59,9 @@ class StringsPt {
   /// Trip screen title.
   static const String tripTitle = 'Viagem';
 
+  /// Share action starting a trip.
+  static const String shareTrip = 'Estou no ônibus';
+
   /// Line screen title.
   static const String lineTitle = 'Linha';
 

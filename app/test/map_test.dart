@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pontual/features/map/map_widget.dart';
 import 'package:pontual/features/map/tile_source.dart';
@@ -22,12 +24,14 @@ void main() {
   testWidgets('map shows tappable OSM attribution', (
     WidgetTester tester,
   ) async {
+    final MockClient tiles = MockClient((_) async => http.Response('', 404));
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
           body: PontualMap(
-            center: LatLng(-18.72, -39.85),
+            center: const LatLng(-18.72, -39.85),
             tileUrlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            httpClient: tiles,
           ),
         ),
       ),
