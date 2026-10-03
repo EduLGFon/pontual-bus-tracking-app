@@ -1,40 +1,37 @@
-# step.md - Current step: T16 static deploy
+# step.md - Current step: T17 route tool
 
-Status: partial 2026-10-03 (repo side done). Next: T17. Blocked: Pages
-project, DNS, and secrets need the owner (INFRA-05, INFRA-06). T04 and T05
-blocked on owner infra answers.
+Status: partial 2026-10-03 (tool done). Next: M3 client foundation (T18).
+Blocked: real route traces need owner field rides; Pages project, DNS, and
+secrets need the owner; VPS provisioning and deploys need the owner.
 
-## 1. What T16 is
+## 1. What T17 is
 
-PLAN.md section 16, Milestone M2. Deliverable: Cloudflare Pages deploy of
-build/ plus _headers.
+PLAN.md section 16, Milestone M2. Deliverable: route tool with GPX/GeoJSON
+to encoded polyline plus route file loaded by the server.
 
 ## 2. Done 2026-10-03
 
-- Builder writes build/_headers per PLAN 12.5 with env API origin.
-- deploy-static.yml builds data plus web (no-CDN) and deploys via pinned
-  wrangler-action to project pontual with environment static-prod.
-- Builder test asserts manifest/config revalidation rules.
-- Verified: tools tests pass, _headers content checked, YAML parses.
+- Converter with 5 m simplification, 1000-point cap, 8 KB polyline budget.
+- Builder encodes routes into the bundle and manifest; server decodes.
+- Verified on synthetic traces with unit tests; 67 server tests pass.
 
-## 3. Still owner-blocked
+## 3. Acceptance criteria (from PLAN T17)
 
-Pages project creation, DNS, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
-API_ORIGIN production value, vars.API_ORIGIN. Live ETag revalidation
-against Pages stays VERIFY after the owner connects the project.
+- Polyline under 8 KB per line: met by construction and enforced by the tool.
 
 ## 4. Verify
 
-1. `deno task data-test` passes in tools/.
-2. `build/_headers` contains the CSP and no-cache rules.
+1. `deno task route-test` and `data-test` pass in tools/.
+2. `deno task test` passes in server/.
 
 ## 5. Rules
 
-- One logical change only. No route geometry (T17).
-- Docs English. No em dashes. Commit: `feat: add static deploy files (T16)`.
+- One logical change only. No real traces committed.
+- Docs English. No em dashes. Commit: `feat: add route geometry tool (T17)`.
 
 ## 6. Next
 
-T17 (route tool: GPX/GeoJSON to encoded polyline plus route file loaded by
-the server). Geometry traces need owner field rides; the tool itself is
-buildable and testable on synthetic input now.
+M3 client foundation: T18 (theme tokens, light/dark, strings_pt, router
+skeleton), T19 (core utilities plus tests), T20-T23 (networking, API,
+static data, remote config). Backend M1 and data M2 are complete except
+owner-blocked deploys and traces.

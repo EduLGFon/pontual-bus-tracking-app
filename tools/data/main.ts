@@ -212,20 +212,52 @@ async function sha12(text: string): Promise<string> {
 export async function buildBundle(
   files: LineFile[],
 ): Promise<Record<string, unknown>> {
+  const { encodePolyline, parseGeoJson } = await import("../route/main.ts");
   const lines = files.map((f) => f.data).sort((a, b) =>
     Number(a["id"]) - Number(b["id"])
   );
+  const codes = new Set(lines.map((l) => String(l["code"])));
   const linesText = JSON.stringify(lines);
   const linesHash = await sha12(linesText);
   const linesName = `lines.${linesHash}.json`;
 
   await Deno.mkdir(BUILD_DIR, { recursive: true });
+  await Deno.mkdir(new URL("routes/", BUILD_DIR), { recursive: true });
   await Deno.writeTextFile(new URL(linesName, BUILD_DIR), linesText);
+
+  const routes: Record<string, string> = {};
+  const routesDir = new URL("../routes/", LINES_DIR);
+  for await (const entry of Deno.readDir(routesDir)) {
+    if (!entry.isFile || !entry.name.endsWith(".geojson")) continue;
+    const code = entry.name.replace(/\.geojson$/, "");
+    if (!codes.has(code)) {
+      throw new Error(`route ${entry.name} matches no line`);
+    }
+    const points = parseGeoJson(
+      await Deno.readTextFile(new URL(entry.name, routesDir)),
+    );
+    if (points.length > 1000) {
+      throw new Error(
+        `route ${code} has ${points.length} points, simplify first`,
+      );
+    }
+    const poly = encodePolyline(points, 5);
+    if (new TextEncoder().encode(poly).length > 8 * 1024) {
+      throw new Error(`route ${code} polyline exceeds 8 KB`);
+    }
+    const hash = await sha12(poly);
+    const name = `${code}.${hash}.json`;
+    await Deno.writeTextFile(
+      new URL(`routes/${name}`, BUILD_DIR),
+      JSON.stringify({ code, polyline: poly }),
+    );
+    routes[code] = `routes/${name}`;
+  }
 
   const manifest = {
     data_version: linesHash,
     lines: linesName,
-    routes: {},
+    routes,
     generated_at: new Date().toISOString(),
   };
   await Deno.writeTextFile(

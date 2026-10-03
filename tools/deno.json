@@ -4,6 +4,8 @@
     "data-validate": "deno run --allow-read=../data data/main.ts validate",
     "data-build": "deno run --allow-read=../data --allow-write=../build --allow-env=API_ORIGIN data/main.ts build",
     "data-test": "deno test --allow-read=../data,../build --allow-write=../build --allow-env=API_ORIGIN data/main_test.ts",
+    "route-test": "deno test route/main_test.ts",
+    "route": "deno run --allow-read=../data --allow-write=../data/routes route/main.ts",
     "fmt": "deno fmt --check",
     "lint": "deno lint"
   },

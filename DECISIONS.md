@@ -327,6 +327,14 @@ PLAN.md 0.3).
   (INFRA-05, INFRA-06), API_TOKEN and ACCOUNT_ID secrets, and the
   production API_ORIGIN value. Local verify: _headers content checked,
   builder test asserts the revalidation rules, both workflows parse.
+- 2026-10-03: T17 partial (tool done). Route converter in tools/route
+  reads GPX tracks or GeoJSON LineString, simplifies with Douglas-Peucker
+  at 5 m, and writes data/routes/<code>.geojson; the data builder encodes
+  precision-5 polylines into build/routes with an 8 KB budget and wires
+  the manifest routes map; the server decodes them into the route check.
+  Verified on synthetic traces (300 points kept 2, 16 B polyline) with
+  round-trip tests plus parser tests. Real pilot traces need owner field
+  rides, so no geometry is committed.
 - 2026-10-03: T15 done. All 21 urban lines seeded from onibus.online
   (retrieved 2026-10-03): 4 pilot lines (60, 62, 64, 66) with transcribed
   weekday timetables plus Sat and Sun where published, 17 names-only lines

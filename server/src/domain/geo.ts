@@ -80,8 +80,7 @@ function distToSegM(
   return Math.hypot(px - cx, py - cy);
 }
 
-/** Distance to a polyline in meters. Linear scan; routes are small. */
-export function distToPolylineM(
+/** Distance to a polyline in meters. Linear scan; routes are small. */ export function distToPolylineM(
   lat: number,
   lng: number,
   polyline: { lat: number; lng: number }[],
@@ -103,4 +102,40 @@ export function distToPolylineM(
     if (d < best) best = d;
   }
   return best;
+}
+
+/**
+ * Decode a Google polyline at the given precision. Mirrors the data route
+ * tool (tools/route/main.ts); kept in sync by the round-trip test.
+ */
+export function decodePolyline(
+  text: string,
+  precision = 5,
+): { lat: number; lng: number }[] {
+  const factor = 10 ** precision;
+  const pts: { lat: number; lng: number }[] = [];
+  let lat = 0;
+  let lng = 0;
+  let i = 0;
+  while (i < text.length) {
+    let shift = 0;
+    let delta = 0;
+    let b: number;
+    do {
+      b = text.charCodeAt(i++) - 63;
+      delta |= (b & 31) << shift;
+      shift += 5;
+    } while (b >= 32);
+    lat += delta & 1 ? ~(delta >> 1) : delta >> 1;
+    shift = 0;
+    delta = 0;
+    do {
+      b = text.charCodeAt(i++) - 63;
+      delta |= (b & 31) << shift;
+      shift += 5;
+    } while (b >= 32);
+    lng += delta & 1 ? ~(delta >> 1) : delta >> 1;
+    pts.push({ lat: lat / factor, lng: lng / factor });
+  }
+  return pts;
 }
