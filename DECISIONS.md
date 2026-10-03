@@ -358,6 +358,13 @@ PLAN.md 0.3).
   config refresh, daily 03:30 Sao Paulo device purge, and 10 s db health
   probe; all timers stop on shutdown. Engine test 19 passes: fresh store
   answers gone, resume rebuilds the vehicle. Full suite is 52 tests green.
+- 2026-10-03: T25 done. Timetable tab with day-type default from the
+  São Mateus date, origin selector, next-departure card, dimmed past
+  times, and the unofficial-data disclaimer; pure schedule helpers live
+  in domain with widget tests. Two real bugs fixed along the way: the
+  origin dropdown needed initialValue on current Flutter, and lines
+  without any schedules crashed initState. Local verify: analyze clean,
+  43 client tests pass, manifest audit clean.
 - 2026-10-03: T24 done. Home screen with local search, cached line list,
   and live indicators that fill in without spinners, wired through
   Riverpod providers. Fixed asset manifest parsing to real JSON decode.

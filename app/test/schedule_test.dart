@@ -1,0 +1,114 @@
+// T25 tests: schedule logic for all day types plus the timetable tab.
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:pontual/data/static_data/static_data.dart';
+import 'package:pontual/domain/schedule.dart';
+import 'package:pontual/features/line/schedule_tab.dart';
+
+const StaticLine demo = StaticLine(
+  id: 60,
+  code: 'demo',
+  short: '60',
+  name: 'Demo',
+  pilot: true,
+  schedules: <Map<String, dynamic>>[
+    <String, dynamic>{
+      'day_type': 'weekday',
+      'origin': 'A',
+      'times': <String>['05:30', '14:35'],
+    },
+    <String, dynamic>{
+      'day_type': 'saturday',
+      'origin': 'A',
+      'times': <String>['06:00'],
+    },
+    <String, dynamic>{
+      'day_type': 'sunday_holiday',
+      'origin': 'A',
+      'times': <String>['07:00'],
+    },
+    <String, dynamic>{
+      'day_type': 'weekday',
+      'origin': 'B',
+      'times': <String>['06:00'],
+    },
+  ],
+);
+
+void main() {
+  test('day type follows the local date', () {
+    // 2026-10-03 is a Saturday; 2026-10-04 a Sunday; 2026-10-05 a Monday.
+    expect(dayTypeFor(DateTime(2026, 10, 3)), DayType.saturday);
+    expect(dayTypeFor(DateTime(2026, 10, 4)), DayType.sundayHoliday);
+    expect(dayTypeFor(DateTime(2026, 10, 5)), DayType.weekday);
+  });
+
+  test('next departure skips past times', () {
+    expect(nextDeparture(<String>['05:30', '14:35'], 14 * 60), '14:35');
+    expect(nextDeparture(<String>['05:30'], 6 * 60), isNull);
+    expect(minutesUntil('14:35', 14 * 60 + 23), 12);
+  });
+
+  test('times group by hour', () {
+    expect(
+      groupByHour(<String>['05:30', '05:45', '06:10']),
+      <String, List<String>>{
+        '05': <String>['05:30', '05:45'],
+        '06': <String>['06:10'],
+      },
+    );
+  });
+
+  testWidgets('tab shows next departure and disclaimer', (
+    WidgetTester tester,
+  ) async {
+    // Monday 2026-10-05 14:23 São Mateus time ~= 17:23 UTC.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScheduleTab(line: demo, now: DateTime.utc(2026, 10, 5, 17, 23)),
+        ),
+      ),
+    );
+    expect(find.text('Próximo: 14:35 (em 12 min)'), findsOneWidget);
+    expect(find.textContaining('não oficiais'), findsOneWidget);
+  });
+
+  testWidgets('origin selector switches times', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScheduleTab(line: demo, now: DateTime.utc(2026, 10, 5, 8)),
+        ),
+      ),
+    );
+    expect(find.text('05:30'), findsOneWidget);
+    await tester.tap(find.text('A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B').last);
+    await tester.pumpAndSettle();
+    expect(find.text('06:00'), findsOneWidget);
+  });
+
+  testWidgets('empty day shows the empty state', (WidgetTester tester) async {
+    const StaticLine empty = StaticLine(
+      id: 10,
+      code: 'empty',
+      short: '10',
+      name: 'Empty',
+      pilot: false,
+      schedules: <Map<String, dynamic>>[],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScheduleTab(line: empty, now: DateTime.utc(2026, 10, 5, 8)),
+        ),
+      ),
+    );
+    expect(
+      find.text('Sem horários cadastrados para este dia.'),
+      findsOneWidget,
+    );
+  });
+}

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/features/home/home_screen.dart';
+import 'package:pontual/features/line/line_screen.dart';
 
 /// Builds a placeholder scaffold with semantics labels in pt-BR.
 Widget placeholder(String title, String semanticsLabel) {
@@ -39,7 +40,9 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/line/:id',
         builder: (BuildContext context, GoRouterState state) {
-          return const LinePlaceholder();
+          return LineScreen(
+            lineId: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+          );
         },
       ),
       GoRoute(
@@ -137,17 +140,6 @@ class WelcomePlaceholder extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// Line screen skeleton.
-class LinePlaceholder extends StatelessWidget {
-  /// Creates the line skeleton.
-  const LinePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return placeholder(StringsPt.lineTitle, StringsPt.lineTitle);
   }
 }
 

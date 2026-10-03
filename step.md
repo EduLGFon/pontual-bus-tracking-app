@@ -1,23 +1,22 @@
-# step.md - Current step: T24 home screen
+# step.md - Current step: T25 timetables tab
 
-Status: done 2026-10-03. Next: T25. Blocked: real route traces, Pages
+Status: done 2026-10-03. Next: T26. Blocked: real route traces, Pages
 project/DNS/secrets, VPS provisioning/deploys need the owner.
 
-## 1. What T24 is
+## 1. What T25 is
 
-PLAN.md section 16, Milestone M4. Deliverable: S02 Welcome plus S03 Home
-with search, list, and live indicators via GET /v1/live.
+PLAN.md section 16, Milestone M4. Deliverable: S05 Horários tab with day
+types, origin selector, next departure, disclaimer.
 
 ## 2. Done 2026-10-03
 
-- Providers wiring features to data with test overrides.
-- HomeScreen with local search, cached list, live dots, footnote.
-- Router serves the real home; welcome keeps final copy.
-- Verified: analyze clean, 37 tests pass, manifest audit clean.
+- Pure schedule helpers plus ScheduleTab plus LineScreen with tabs.
+- Router serves the real line screen; map tab is a placeholder to T26/T28.
+- Verified: analyze clean, 43 tests pass, manifest audit clean.
 
-## 3. Acceptance criteria (from PLAN T24)
+## 3. Acceptance criteria (from PLAN T25)
 
-- No spinners on cached content; live dots appear.
+- Correct for all day types; offline.
 
 ## 4. Verify
 
@@ -26,10 +25,10 @@ with search, list, and live indicators via GET /v1/live.
 
 ## 5. Rules
 
-- One logical change only. No timetables tab (T25).
-- Docs English. No em dashes. Commit: `feat: add home screen (T24)`.
+- One logical change only. No map widget (T26).
+- Docs English. No em dashes. Commit: `feat: add timetables tab (T25)`.
 
 ## 6. Next
 
-T25 (S05 timetables tab: day types, origin selector, next departure,
-disclaimer).
+T26 (map widget: TileSource, OSM compliance, capped cache, bounds,
+attribution; S3 results applied).
