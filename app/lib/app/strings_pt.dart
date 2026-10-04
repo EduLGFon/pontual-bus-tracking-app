@@ -206,6 +206,26 @@ class StringsPt {
   static const String privacyOffline =
       'Sem conexão. Tente novamente quando estiver online.';
 
+  /// Share start failed: could not reach the server.
+  static const String shareNoConnection =
+      'Sem conexão com o servidor. Verifique a internet e tente de novo.';
+
+  /// Share start failed: no location fix within the wait window.
+  static const String shareNoGps =
+      'Não conseguimos sua localização. Vá para um lugar aberto e tente de novo.';
+
+  /// Share start failed: server rate or capacity limits.
+  static const String shareBusy =
+      'Muita gente tentando agora. Aguarde um pouco e tente de novo.';
+
+  /// Share start failed: fix outside the served area.
+  static const String shareOutsideArea =
+      'Você está fora da área atendida pelo Pontual.';
+
+  /// Share start failed: anything else.
+  static const String shareStartFailed =
+      'Não foi possível iniciar a viagem. Tente de novo.';
+
   /// Consent revocation action.
   static const String privacyRevoke = 'Revogar consentimento';
 

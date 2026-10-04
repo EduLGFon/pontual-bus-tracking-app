@@ -21,6 +21,29 @@ import 'package:pontual/features/trip/permission_sheet.dart';
 import 'package:pontual/features/trip/ping_client.dart';
 import 'package:pontual/features/trip/trip_supervisor.dart';
 
+/// Why the last [TripController.startTrip] returned false. Null when the
+/// last start succeeded or none ran. Read by the share flow to explain
+/// the failure instead of failing silently.
+enum StartFailure {
+  /// OS permission denied; the flow shows the permission sheets.
+  permission,
+
+  /// Network or registration failure.
+  offline,
+
+  /// No location fix within the wait window.
+  noGps,
+
+  /// Server rate, quota, capacity, or maintenance limits.
+  busy,
+
+  /// Fix outside the served area.
+  outsideArea,
+
+  /// Anything else, including consent mismatches after reposting.
+  failed,
+}
+
 /// Trip end reasons shown on the S09 end card.
 enum TripEndKind {
   /// User tapped Desci.
@@ -101,6 +124,11 @@ class TripController extends ChangeNotifier {
   int? get startedAtMs => _startedAtMs;
   int? _startedAtMs;
 
+  /// Why the last [startTrip] returned false. Null after a successful
+  /// start. The share flow maps this to a user-facing message.
+  StartFailure? get failReason => _failReason;
+  StartFailure? _failReason;
+
   LocationService? _locations;
   StreamSubscription<TripFix>? _fixSub;
   PingClient? _ping;
@@ -144,17 +172,40 @@ class TripController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Maps an API failure to the share-flow reason shown to the user.
+  StartFailure _classify(AppFailure failure) {
+    if (failure is NetworkFailure) {
+      return StartFailure.offline;
+    }
+    if (failure is ServerFailure) {
+      switch (failure.code) {
+        case 'rate':
+        case 'quota':
+        case 'capacity':
+        case 'maint':
+          return StartFailure.busy;
+        case 'area':
+          return StartFailure.outsideArea;
+      }
+    }
+    return StartFailure.failed;
+  }
+
   /// Starts a trip on [lineId]. Returns false when consent is declined.
+  /// [firstFixTimeout] bounds the wait for the first accepted GPS fix;
+  /// expiry sets [failReason] to [StartFailure.noGps].
   Future<bool> startTrip({
     required int lineId,
     required String lineLabel,
     required Future<bool> Function() showConsent,
     required Future<void> Function() showPermissions,
+    Duration firstFixTimeout = const Duration(seconds: 60),
   }) async {
     _lineId = lineId;
     _lineLabel = lineLabel;
     _endKind = null;
     _endDetail = null;
+    _failReason = null;
     _supervisor = TripSupervisor(gateway: _deps.gateway);
     _samplingMode = SamplingMode.waiting;
     _set(tripReduce(_state, TripEvent.tapStart));
@@ -184,6 +235,7 @@ class TripController extends ChangeNotifier {
     await showPermissions();
     final LocationPermissionState perm = await _deps.gateway.request();
     if (perm != LocationPermissionState.granted) {
+      _failReason = StartFailure.permission;
       _set(tripReduce(_state, TripEvent.permissionsDenied));
       return false;
     }
@@ -191,6 +243,7 @@ class TripController extends ChangeNotifier {
 
     final Result<String> reg = await _deps.api.ensureRegistered();
     if (reg is Err<String>) {
+      _failReason = _classify((reg as Err<String>).failure);
       _set(const TripIdle());
       return false;
     }
@@ -203,7 +256,15 @@ class TripController extends ChangeNotifier {
       mode: SamplingMode.waiting,
       lineLabel: _lineLabel,
     );
-    final TripFix first = await stream.first;
+    TripFix first;
+    try {
+      first = await stream.first.timeout(firstFixTimeout);
+    } on TimeoutException {
+      await _stopLocal();
+      _failReason = StartFailure.noGps;
+      _set(const TripIdle());
+      return false;
+    }
     final Result<TripInstruction> started = await _deps.api.startTrip(
       token,
       lineId: lineId,
@@ -215,6 +276,13 @@ class TripController extends ChangeNotifier {
     );
     if (started is Err<TripInstruction>) {
       await _stopLocal();
+      final AppFailure failure = (started as Err<TripInstruction>).failure;
+      _failReason = _classify(failure);
+      if (failure is ServerFailure && failure.code == 'consent') {
+        // Server never recorded our consent: forget the confirmation so
+        // the next tap reposts before retrying the start.
+        await _deps.consentStore.clearPosted();
+      }
       _set(tripReduce(_state, TripEvent.startFailed));
       _set(const TripIdle());
       return false;

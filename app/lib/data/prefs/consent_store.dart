@@ -45,6 +45,13 @@ class ConsentStore {
     await prefs.setInt(consentPostedKey, version);
   }
 
+  /// Forgets the server confirmation so the next start reposts.
+  /// Used when the server rejects a trip for missing consent.
+  Future<void> clearPosted() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove(consentPostedKey);
+  }
+
   /// Clears acceptance for consent revocation.
   Future<void> clear() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
