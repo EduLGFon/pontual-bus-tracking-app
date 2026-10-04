@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/testing.dart';
 import 'package:pontual/app/providers.dart';
 import 'package:pontual/app/router.dart';
+import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/data/config/remote_config.dart';
 import 'package:pontual/data/static_data/static_data.dart';
 import 'package:pontual/features/trip/share_flow.dart';
@@ -64,18 +65,20 @@ Widget shareButton(StaticLine line) {
       ),
     ],
     child: MaterialApp(
-      home: Builder(
-        builder: (BuildContext context) {
-          return Consumer(
-            builder: (BuildContext context, WidgetRef ref, _) {
-              return FilledButton(
-                onPressed: () =>
-                    shareTrip(context, ref, line, gateway: gateway),
-                child: const Text('share'),
-              );
-            },
-          );
-        },
+      home: Scaffold(
+        body: Builder(
+          builder: (BuildContext context) {
+            return Consumer(
+              builder: (BuildContext context, WidgetRef ref, _) {
+                return FilledButton(
+                  onPressed: () =>
+                      shareTrip(context, ref, line, gateway: gateway),
+                  child: const Text('share'),
+                );
+              },
+            );
+          },
+        ),
       ),
     ),
   );
@@ -115,6 +118,24 @@ void main() {
     await tester.tap(find.text('share'));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Compartilhar sua localização'), findsNothing);
+  });
+
+  testWidgets('failed start explains itself', (WidgetTester tester) async {
+    await tester.pumpWidget(shareButton(pilotLine));
+    await tester.tap(find.text('share'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aceitar e continuar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continuar'), findsOneWidget);
+    await tester.tap(find.text('Continuar'));
+    // Pump forward without settling: pumpAndSettle would advance past the
+    // SnackBar's dismiss timer and hide the message under test.
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // The rig client throws on any request: registration fails and the
+    // flow must say so instead of going silent.
+    expect(find.text(StringsPt.shareNoConnection), findsOneWidget);
   });
 
   testWidgets('/trip with a controller shows the trip', (

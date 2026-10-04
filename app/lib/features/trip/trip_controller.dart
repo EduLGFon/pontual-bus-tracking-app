@@ -25,6 +25,9 @@ import 'package:pontual/features/trip/trip_supervisor.dart';
 /// last start succeeded or none ran. Read by the share flow to explain
 /// the failure instead of failing silently.
 enum StartFailure {
+  /// User declined or dismissed the consent sheet. Stays silent.
+  declined,
+
   /// OS permission denied; the flow shows the permission sheets.
   permission,
 
@@ -227,6 +230,7 @@ class TripController extends ChangeNotifier {
       },
     );
     if (consent == ConsentResult.declined) {
+      _failReason = StartFailure.declined;
       _set(tripReduce(_state, TripEvent.consentDeclined));
       return false;
     }

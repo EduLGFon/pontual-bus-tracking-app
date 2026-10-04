@@ -109,6 +109,9 @@ Future<void> _shareTrip(
   if (!context.mounted) {
     return;
   }
+  if (reason == StartFailure.declined) {
+    return;
+  }
   if (reason == StartFailure.permission) {
     final LocationPermissionState perm = await gateway.check();
     if (!context.mounted) {
@@ -142,13 +145,16 @@ String _messageFor(StartFailure? reason) {
     case StartFailure.outsideArea:
       return StringsPt.shareOutsideArea;
     case StartFailure.permission:
+    case StartFailure.declined:
     case StartFailure.failed:
     case null:
       return StringsPt.shareStartFailed;
   }
 }
 
-/// Shows a short explanation where the tap happened.
+/// Shows a short explanation where the tap happened. No-op without a
+/// Scaffold (tests); production call sites always have one.
 void _tell(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  ScaffoldMessenger.maybeOf(context)
+      ?.showSnackBar(SnackBar(content: Text(message)));
 }
