@@ -44,3 +44,24 @@ Deno.test("lines seed defaults empty and parses", () => {
   });
   assertEquals(cfg.linesJson, [{ id: 7, isActive: true }]);
 });
+
+Deno.test("easy publish defaults off and stays local", () => {
+  assertEquals(loadConfig(baseEnv()).testEasyPublish, false);
+  const local = loadConfig({ ...baseEnv(), TEST_EASY_PUBLISH: "true" });
+  assertEquals(local.testEasyPublish, true);
+  assertThrows(
+    () => loadConfig({ ...baseEnv(), TEST_EASY_PUBLISH: "yes" }),
+    Error,
+    "invalid env TEST_EASY_PUBLISH",
+  );
+  assertThrows(
+    () =>
+      loadConfig({
+        ...baseEnv(),
+        APP_ENV: "staging",
+        TEST_EASY_PUBLISH: "true",
+      }),
+    Error,
+    "invalid env TEST_EASY_PUBLISH",
+  );
+});

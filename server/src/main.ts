@@ -24,6 +24,7 @@ function readEnv(): Record<string, string | undefined> {
     "LOG_LEVEL",
     "METRICS_PORT",
     "LINES_JSON",
+    "TEST_EASY_PUBLISH",
   ];
   const out: Record<string, string | undefined> = {};
   for (const n of names) out[n] = Deno.env.get(n);
@@ -60,6 +61,21 @@ console.log(
 const store = createStore();
 const hub = new Hub();
 const engine = defaultEngineConfig();
+if (config.testEasyPublish) {
+  // Testing only: publish on the first ping and count every fix as
+  // moving, so stationary field tests show a bus. Refused outside local
+  // by config validation. See DECISIONS.md.
+  engine.movingSpeedMps = 0;
+  engine.movingTicksToPublish = 1;
+  console.log(
+    JSON.stringify({
+      level: "warn",
+      msg: "test easy-publish enabled",
+      movingSpeedMps: engine.movingSpeedMps,
+      movingTicksToPublish: engine.movingTicksToPublish,
+    }),
+  );
+}
 
 function broadcastLine(lineId: number): void {
   const nowMs = Date.now();

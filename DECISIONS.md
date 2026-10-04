@@ -781,3 +781,10 @@ request history; the entries below supersede it where decided.
   server-confirmed version separately; reconcile POSTs only while
   unconfirmed, at most one request per version once confirmed. Full app
   suite: 135 green, 1 skipped.
+- 2026-10-04: Field testing needed stationary publishing: the movement
+  gates (moving_speed_mps 3, moving_ticks_to_publish 2) mean a walking
+  tester never creates a vehicle. Added local-only TEST_EASY_PUBLISH
+  (default false): movingSpeedMps 0 + movingTicksToPublish 1, so the
+  first ping publishes. Guarded by config validation, which refuses to
+  start with it set unless APP_ENV=local, plus a warn log at boot.
+  Production behavior unchanged. Full server suite: 68 green.

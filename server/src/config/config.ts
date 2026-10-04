@@ -18,6 +18,11 @@ export interface ServerConfig {
   metricsPort: number;
   /** Local-dev line seed until the T14 bundle lands. Empty in staging/prod. */
   linesJson: { id: number; isActive: boolean }[];
+  /**
+   * Test-only relaxation: publish on the first ping and count every fix
+   * as moving. Local only; refused in staging/prod.
+   */
+  testEasyPublish: boolean;
 }
 
 function required(
@@ -90,6 +95,14 @@ export function loadConfig(
     throw new Error("invalid env LOG_LEVEL");
   }
   const metrics = parseHostPort(required("METRICS_PORT", env), "METRICS_PORT");
+  const easyRaw = env["TEST_EASY_PUBLISH"] ?? "false";
+  if (easyRaw !== "true" && easyRaw !== "false") {
+    throw new Error("invalid env TEST_EASY_PUBLISH");
+  }
+  const testEasyPublish = easyRaw === "true";
+  if (testEasyPublish && appEnvRaw !== "local") {
+    throw new Error("invalid env TEST_EASY_PUBLISH");
+  }
   const linesRaw = env["LINES_JSON"] ?? "[]";
   let linesJson: { id: number; isActive: boolean }[];
   try {
@@ -120,5 +133,6 @@ export function loadConfig(
     metricsHost: metrics.host,
     metricsPort: metrics.port,
     linesJson,
+    testEasyPublish,
   };
 }
