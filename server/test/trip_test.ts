@@ -301,6 +301,12 @@ Deno.test("AC14: kill switch stops writes with maint", async () => {
     const health = await hono.request("/v1/health");
     assertEquals(health.status, 200);
   } finally {
-    await sql.end();
+    // Leave the shared dev database as found: the kill switch must
+    // never leak into later runs (soak, manual trips). See T35 note.
+    try {
+      await sql`delete from app_config where key = 'service_enabled'`;
+    } finally {
+      await sql.end();
+    }
   }
 });

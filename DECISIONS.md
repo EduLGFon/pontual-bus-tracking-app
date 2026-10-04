@@ -604,6 +604,17 @@ PLAN.md 0.3).
   drafted in `docs/runbooks/vps-hardening.md`. Owner-blocked: all
   VPS execution, upload keystore, uptime-monitor service choice
   (INFRA-10), first deploy and rollback run.
+- 2026-10-03: T46 incident and restart (no code finding). The first
+  8-hour soak was contaminated mid-run: a final verification
+  `deno task test` against the shared dev DB truncated the sim
+  device rows (`db_test` setup) and re-set `service_enabled=false`
+  (AC14, known T35 hygiene gap), flipping sim pings to 401 and
+  writes to `503 maint`. Fixed AC14 with a finally-block teardown
+  that deletes the switch row (suite re-verified 67 green,
+  app_config clean afterwards). Rule: never run the suite against
+  a live soak DB. Fresh soak started 13:47 UTC (3 buses, 6 riders,
+  line 60, seed 7, resource watcher on the true server PID);
+  result lands here when it completes.
 - 2026-10-03: T38 done. Foreground-only web sharing: `wakelock_plus`
   1.8.0 (allow-list PLAN 8.2, no ADR needed; its Android manifest adds
   no permissions, source audit still PASS) behind a `WebWakeLock` seam
