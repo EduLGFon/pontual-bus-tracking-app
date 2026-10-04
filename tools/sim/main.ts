@@ -137,6 +137,7 @@ async function main(): Promise<void> {
   const errors: string[] = [];
   const roleChanges: string[] = [];
   let handovers = 0;
+  let resumes = 0;
   const deadline = Date.now() + args.durationS * 1000;
   const lats = riders.map(() => baseLat);
   const lngs = riders.map((_, i) =>
@@ -144,25 +145,43 @@ async function main(): Promise<void> {
   );
   const seqs = riders.map(() => 0);
   let seq = 0;
+  // Buses bounce inside the city bbox so an 8-hour soak never drifts
+  // out of bounds (out-of-bbox fixes strike toward an abuse end, which
+  // is correct engine behavior, not soak load). Edges stay inside the
+  // server bbox (lng -40.25 to -39.55) with margin.
+  const dirs = riders.map(() => 1);
+  const eastEdge = baseLng + 0.24;
+  const westEdge = baseLng - 0.04;
 
-  for (const [i, rider] of riders.entries()) {
-    const start = await post(args.base, "/v1/trip", rider.token, {
+  async function startRider(i: number): Promise<void> {
+    const start = await post(args.base, "/v1/trip", riders[i].token, {
       line: args.line,
       lat: lats[i],
       lng: lngs[i],
       acc: 10,
-      bat: 60 + Math.floor(rand() * 40),
+      bat: 75,
       chg: false,
     });
-    if (start.status !== 201) errors.push(`start failed: ${start.status}`);
+    if (start.status !== 201) {
+      errors.push(`start failed: ${start.status}`);
+    } else {
+      riders[i].role = "W";
+      seqs[i] = 0;
+    }
+  }
+
+  for (const [i] of riders.entries()) {
+    await startRider(i);
   }
 
   while (Date.now() < deadline) {
     for (const [i, rider] of riders.entries()) {
       seqs[i] += 1;
       seq += 1;
-      // Bus drifts east at ~8 m/s between pings.
-      lngs[i] += (8 * Math.max(1, args.pingS || 15)) / (111320 * 0.947);
+      // Bus cruises at ~8 m/s, bouncing inside the bbox edges.
+      lngs[i] += dirs[i] * (8 * Math.max(1, args.pingS || 15)) /
+        (111320 * 0.947);
+      if (lngs[i] > eastEdge || lngs[i] < westEdge) dirs[i] *= -1;
       const cadence = args.pingS > 0
         ? args.pingS
         : rider.role === "L"
@@ -174,7 +193,7 @@ async function main(): Promise<void> {
         lat: lats[i],
         lng: lngs[i],
         spd: 8,
-        hdg: 90,
+        hdg: dirs[i] === 1 ? 90 : 270,
         acc: 10,
         bat: 75,
         chg: false,
@@ -189,6 +208,11 @@ async function main(): Promise<void> {
           if (body.r === "L" || rider.role === "L") handovers += 1;
           rider.role = body.r;
         }
+      } else if (res.status === 404) {
+        // Trip ended server-side: resume like a real client (KL6) so the
+        // soak keeps constant load. Counted separately from errors.
+        resumes += 1;
+        await startRider(i);
       } else if (res.status !== 200) {
         errors.push(`ping ${res.status} ${JSON.stringify(body)}`);
       }
@@ -255,6 +279,7 @@ async function main(): Promise<void> {
     pings: riders.reduce((n, r) => n + r.pings, 0),
     roleChanges: roleChanges.length,
     handovers,
+    resumes,
     wsMsgs,
     wsSnapshots,
     lastVehicleAgeS,
