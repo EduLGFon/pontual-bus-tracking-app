@@ -670,3 +670,40 @@ request history; the entries below supersede it where decided.
 - D28 - D20 roadmap confirmed: history and analytics only on de-identified
   aggregates, raw per-trip tracks never stored, consent bump plus RIPD update
   plus legal review before any such work.
+- 2026-10-04: Local verification session on a browser-capable machine.
+  Reverted an uncommitted `deno run -A` in `server/deno.json` back to the
+  minimal scoped flags (no `--allow-all`, ever, per PLAN 12.2). Fixed the
+  local boot: `server/.env` had `METRICS_PORT` on 9093 outside the
+  `--allow-net` list (crash) and a `DATABASE_URL` pointing at an unreachable
+  database (500 on register); 9091 plus the local PG 16 container on 5433
+  boots clean with 21 lines. Full suites green: server 67/67 (after dbmate
+  2.36.0 migrate), client VM 131 plus analyze clean, client
+  `flutter test --platform chrome` 131 green (was 4 failures, all fixed
+  below), tools data/fmt/lint clean, gitleaks 8.28.0 scan clean (325 MB,
+  no leaks). E2E by hand against the local server: register, consent,
+  start, W-to-L promotion, vehicle snapshot, `/v1/live`, idempotent end,
+  delete-my-data with 401 after; implausible-speed pings strike into
+  `abuse` end as designed. Browser smoke on the release web build:
+  welcome, line-60 map with real OSM tiles plus 3 soak vehicles live,
+  and settings all render with no console errors; static 404s fall back
+  to bundled data per the offline-first design. 8-hour soak (3 buses,
+  6 riders, line 60, seed 7) started 12:54 UTC, healthy at last check
+  (3 vehicles, zero server errors); result lands here on completion.
+  Production fix: release workflows built with no `--dart-define`, so the
+  AAB and PWA would call localhost; both now take `vars.API_ORIGIN` and
+  `vars.STATIC_ORIGIN` with fail-fast checks (owner sets real domains
+  per INFRA-05). README gained a verified local end-to-end run guide.
+- 2026-10-04: Chrome-only test findings (production fix in one case).
+  (1) `decodePolyline` used 32-bit bitwise shifts, which corrupt large
+  deltas on dart2js (test: -120.2 decoded as 42829.47; iOS browsers take
+  the JS fallback so this was user-facing). Rewrote with arithmetic only
+  in `app/lib/core/geo/geo.dart`, verified against the canonical vector
+  on the VM and green on chrome. (2) `api_test` live contract read
+  `Platform.environment`, unsupported on web: now skipped on `kIsWeb`.
+  The same test hardcoded line 7 (CI seed only, 404 on real bundle):
+  new `--dart-define=BUS_API_LINE=` (default 7, use 60 on bundle data),
+  live-passing. (3) `app_test` welcome-to-home relied on rootBundle plus
+  network, empty on chrome: now pumps with literal bundle overrides per
+  the home_test pattern. (4) `map_tab_test` harness overrode
+  `vehicleRepoProvider(7)` only, leaking the real networked repo for the
+  id-10 non-pilot line: now overrides the pumped line id.

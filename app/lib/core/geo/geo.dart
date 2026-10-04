@@ -52,30 +52,32 @@ class BBox {
 }
 
 /// Decodes a Google encoded polyline at [precision] decimals.
+///
+/// Uses only arithmetic (no bitwise shifts): Dart bitwise operators are
+/// 32-bit on dart2js, which corrupts large deltas. This form decodes
+/// identically on the VM, wasm, and plain JavaScript.
 List<LatLng> decodePolyline(String text, [int precision = 5]) {
   final double factor = math.pow(10, precision).toDouble();
   final List<LatLng> points = <LatLng>[];
   int lat = 0;
   int lng = 0;
   int i = 0;
-  while (i < text.length) {
-    int shift = 0;
+
+  int readDelta() {
     int delta = 0;
+    int multiplier = 1;
     int b;
     do {
       b = text.codeUnitAt(i++) - 63;
-      delta |= (b & 31) << shift;
-      shift += 5;
+      delta += (b % 32) * multiplier;
+      multiplier *= 32;
     } while (b >= 32);
-    lat += (delta & 1) != 0 ? ~(delta >> 1) : delta >> 1;
-    shift = 0;
-    delta = 0;
-    do {
-      b = text.codeUnitAt(i++) - 63;
-      delta |= (b & 31) << shift;
-      shift += 5;
-    } while (b >= 32);
-    lng += (delta & 1) != 0 ? ~(delta >> 1) : delta >> 1;
+    return delta.isOdd ? -(delta ~/ 2) - 1 : delta ~/ 2;
+  }
+
+  while (i < text.length) {
+    lat += readDelta();
+    lng += readDelta();
     points.add(LatLng(lat / factor, lng / factor));
   }
   return points;

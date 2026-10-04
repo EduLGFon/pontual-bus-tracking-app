@@ -1,5 +1,18 @@
 # step.md - progress past T37
 
+Status 2026-10-04 (browser-capable machine): everything runnable locally
+is green. Client VM 131 plus analyze clean, client
+`flutter test --platform chrome` 131 green (4 chrome-only failures found
+and fixed: JS-bitwise polyline decoder rewritten, web-gated contract
+test, BUS_API_LINE define, deterministic widget overrides), server 67
+green, gitleaks clean, E2E trip lifecycle verified by hand, release web
+build smoke-tested in headless Chrome (welcome, live map with 3 soak
+vehicles and real OSM tiles, settings; no console errors). Release
+workflows fixed to bake in vars.API_ORIGIN/vars.STATIC_ORIGIN instead of
+localhost. README has a verified local run guide. 8-hour soak (3 buses,
+6 riders, line 60, seed 7) restarted 12:54 UTC after the T46 incident
+review; result lands in DECISIONS.md on completion (~20:54 UTC).
+
 Status 2026-10-03: T38 through T50 done except T46 (8-hour soak
 running in background, completes about 21:30 UTC) and owner-blocked
 items. T37 browser and on-device checks stay parked for a capable

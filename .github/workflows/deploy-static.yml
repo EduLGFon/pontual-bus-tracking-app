@@ -1,5 +1,8 @@
 # Static deploy to Cloudflare Pages. See PLAN.md 17.2.
 # Needs owner secrets: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Needs repo vars: API_ORIGIN (e.g. https://api.example.com) and
+# STATIC_ORIGIN (e.g. https://pontual.pages.dev); the web build bakes
+# them in via --dart-define. Without them the PWA would call localhost.
 # Verified SHAs 2026-10-03 via api.github.com commits endpoints.
 name: deploy-static
 on:
@@ -34,7 +37,12 @@ jobs:
         run: deno task data-build
       - name: Build web
         working-directory: app
-        run: flutter build web --release --no-web-resources-cdn --wasm
+        run: |
+          test -n "${{ vars.API_ORIGIN }}" || (echo "missing vars.API_ORIGIN (e.g. https://api.example.com)" && exit 1)
+          test -n "${{ vars.STATIC_ORIGIN }}" || (echo "missing vars.STATIC_ORIGIN (e.g. https://pontual.pages.dev)" && exit 1)
+          flutter build web --release --no-web-resources-cdn --wasm \
+            --dart-define=API_BASE_URL=${{ vars.API_ORIGIN }} \
+            --dart-define=STATIC_BASE_URL=${{ vars.STATIC_ORIGIN }}/data
       - name: Assemble Pages directory
         run: |
           rm -rf pages && mkdir -p pages/data

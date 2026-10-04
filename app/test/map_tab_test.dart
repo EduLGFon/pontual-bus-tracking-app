@@ -58,7 +58,10 @@ class MapHarness {
     return tester.pumpWidget(
       ProviderScope(
         overrides: [
-          vehicleRepoProvider(7).overrideWithValue(repo),
+          // Override the exact line id under test. A hard-coded id leaks
+          // the real repository (network) for any other line, which fails
+          // on `flutter test --platform chrome` where the origin differs.
+          vehicleRepoProvider(line.id).overrideWithValue(repo),
           tileUrlProvider.overrideWithValue(
             const AsyncValue<String>.data('http://127.0.0.1:9/{z}/{x}/{y}.png'),
           ),

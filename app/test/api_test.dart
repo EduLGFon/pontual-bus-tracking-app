@@ -2,6 +2,7 @@
 // contract test against the local server when BUS_API_BASE is set.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -132,6 +133,10 @@ void main() {
   });
 
   test('real contract against local server', () async {
+    if (kIsWeb) {
+      markTestSkipped('live contract needs dart:io env on the VM');
+      return;
+    }
     final String? base = Platform.environment['BUS_API_BASE'];
     if (base == null || base.isEmpty) {
       markTestSkipped('set BUS_API_BASE to run the live contract');
@@ -148,7 +153,10 @@ void main() {
     expect(await api.postConsents(reg.value, 1), isA<Ok<bool>>());
     final Ok<TripInstruction> started = await api.startTrip(
       reg.value,
-      lineId: 7,
+      // CI seeds the server with a synthetic line 7 (LINES_JSON); the real
+      // bundle has official line numbers, so pass --dart-define=BUS_API_LINE=60
+      // when running against bundle data.
+      lineId: const int.fromEnvironment('BUS_API_LINE', defaultValue: 7),
       lat: -18.72,
       lng: -39.85,
       accuracyM: 10,

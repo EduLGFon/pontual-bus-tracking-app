@@ -6,6 +6,9 @@
 # encrypted secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS,
 # ANDROID_KEY_PASSWORD, ANDROID_STORE_PASSWORD. Until then the
 # build uses debug signing and is install-test only.
+# Also needs repo vars API_ORIGIN (e.g. https://api.example.com) and
+# STATIC_ORIGIN (e.g. https://pontual.pages.dev); the AAB bakes them
+# in via --dart-define. Without them the app would call localhost.
 name: release-android
 on:
   push:
@@ -30,8 +33,12 @@ jobs:
       - name: Build release AAB
         working-directory: app
         run: >
+          test -n "${{ vars.API_ORIGIN }}" || (echo "missing vars.API_ORIGIN" && exit 1);
+          test -n "${{ vars.STATIC_ORIGIN }}" || (echo "missing vars.STATIC_ORIGIN" && exit 1);
           flutter build appbundle --release --obfuscate
           --split-debug-info=build/debug-info
+          --dart-define=API_BASE_URL=${{ vars.API_ORIGIN }}
+          --dart-define=STATIC_BASE_URL=${{ vars.STATIC_ORIGIN }}/data
       - name: Merged manifest audit
         working-directory: app
         run: |
