@@ -18,10 +18,11 @@ enum ConsentResult {
 
 /// Ensures consent for [currentVersion]. [showSheet] presents the S06
 /// sheet; [postConsents] calls POST /v1/consents and returns true on 200.
-/// The server record is reconciled on every start, not just the first
-/// accept: a locally stored acceptance from an offline run must still be
-/// posted, or trip start fails the server consent guard. The server
-/// upserts, so reposting is safe.
+/// The server record is reconciled only while unconfirmed: a locally
+/// stored acceptance from an offline run must still be posted, or trip
+/// start fails the server consent guard. The server upserts, so reposting
+/// is safe. Confirmed versions cost no request (the consents endpoint is
+/// rate limited to a few posts per hour per device).
 Future<ConsentResult> ensureConsent({
   required int currentVersion,
   required ConsentStore store,
@@ -35,8 +36,12 @@ Future<ConsentResult> ensureConsent({
     }
     await store.write(currentVersion);
   }
+  if (await store.readPosted() == currentVersion) {
+    return ConsentResult.granted;
+  }
   final Result<bool> posted = await postConsents();
   if (posted is Ok<bool>) {
+    await store.markPosted(currentVersion);
     return ConsentResult.granted;
   }
   return ConsentResult.offlinePending;

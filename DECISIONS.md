@@ -775,3 +775,9 @@ request history; the entries below supersede it where decided.
   a share started while stationary publishes nothing until the device
   moves (moving_ticks_to_publish), and sitting still ends the trip as
   idle; validate on a moving bus outdoors.
+- 2026-10-04: Consent reconcile posted on every start, burning the
+  10/hour per-device consents quota during retry loops (429s in field
+  testing). Switched to confirm-once: ConsentStore tracks the
+  server-confirmed version separately; reconcile POSTs only while
+  unconfirmed, at most one request per version once confirmed. Full app
+  suite: 135 green, 1 skipped.

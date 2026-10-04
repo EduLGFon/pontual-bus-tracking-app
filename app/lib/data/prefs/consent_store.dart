@@ -6,6 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// SharedPreferences key for the accepted consent version.
 const String consentVersionKey = 'consent_version_accepted';
 
+/// SharedPreferences key for the consent version last confirmed by the
+/// server. A version can be accepted locally while its POST is still
+/// failing (offline); only this key means the server recorded it.
+const String consentPostedKey = 'consent_version_posted';
+
 /// Tracks which consent text version the user accepted.
 class ConsentStore {
   /// Creates a consent store.
@@ -26,6 +31,18 @@ class ConsentStore {
   /// True when the stored acceptance covers [currentVersion].
   Future<bool> covers(int currentVersion) async {
     return await read() == currentVersion;
+  }
+
+  /// Returns the version the server confirmed, or null when never posted.
+  Future<int?> readPosted() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(consentPostedKey);
+  }
+
+  /// Records that the server confirmed [version].
+  Future<void> markPosted(int version) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(consentPostedKey, version);
   }
 
   /// Clears acceptance for consent revocation.

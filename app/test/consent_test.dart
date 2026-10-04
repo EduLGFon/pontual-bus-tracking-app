@@ -56,7 +56,7 @@ void main() {
     expect(await const ConsentStore().read(), 1);
   });
 
-  test('covering version skips sheet but reconciles the post', () async {
+  test('covering unconfirmed version skips sheet but posts once', () async {
     await const ConsentStore().write(1);
     int posts = 0;
     int sheets = 0;
@@ -75,6 +75,28 @@ void main() {
     expect(result, ConsentResult.granted);
     expect(sheets, 0);
     expect(posts, 1);
+  });
+
+  test('confirmed version skips sheet and post', () async {
+    await const ConsentStore().write(1);
+    await const ConsentStore().markPosted(1);
+    int posts = 0;
+    int sheets = 0;
+    final ConsentResult result = await ensureConsent(
+      currentVersion: 1,
+      store: const ConsentStore(),
+      showSheet: () async {
+        sheets += 1;
+        return true;
+      },
+      postConsents: () async {
+        posts += 1;
+        return const Ok<bool>(true);
+      },
+    );
+    expect(result, ConsentResult.granted);
+    expect(sheets, 0);
+    expect(posts, 0);
   });
 
   test('covering version with failed reconcile stays pending', () async {
