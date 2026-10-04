@@ -707,3 +707,17 @@ request history; the entries below supersede it where decided.
   the home_test pattern. (4) `map_tab_test` harness overrode
   `vehicleRepoProvider(7)` only, leaking the real networked repo for the
   id-10 non-pilot line: now overrides the pumped line id.
+- 2026-10-04: WebSocket console errors from website testing analyzed and
+  fixed. The `[flutter_map]` OSM warning is debug-only policy noise (we
+  comply: real User-Agent, attribution, capped cache; silent in release).
+  The repeated `WebSocketChannelException` came from the channel `ready`
+  future: a failed connect completes it with an error that nobody
+  awaited, so it escaped to the zone as an uncaught error even though
+  the stream error itself was handled. The production `openChannel`
+  factory now sinks `ready` errors. Same report exposed a real gap: the
+  socket never reconnected after a drop (only snapshot polling
+  continued), against PLAN 11.3. `VehicleRepository` now reconnects with
+  5/10/20/30 s backoff plus snapshot-on-reconnect, cancelled on `stop`.
+  Proven on chrome against a dead port (3 opens, contained, clean stop)
+  and covered by 2 new `vehicle_test` cases. Full suites: VM analyze
+  clean plus 133 green, chrome 133 green.

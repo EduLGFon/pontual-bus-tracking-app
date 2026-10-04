@@ -212,4 +212,62 @@ void main() {
     await r.stop();
     await channel.dispose();
   });
+
+  test('reconnects after socket down and resyncs', () async {
+    final FakeClock clock = FakeClock(100000);
+    final List<FakeChannel> channels = <FakeChannel>[
+      FakeChannel(),
+      FakeChannel(),
+    ];
+    int opens = 0;
+    int fetches = 0;
+    final VehicleRepository r = VehicleRepository(
+      fetchSnapshot: (_) async {
+        fetches += 1;
+        return <ClientVehicle>[one];
+      },
+      openChannel: (_) async => channels[opens++],
+      wsBaseUrl: () => 'ws://127.0.0.1:8080',
+      clock: clock,
+      launch: (Future<void> task) => unawaited(task),
+      reconnectDelays: const <int>[0],
+    );
+    await r.start(7);
+    expect(opens, 1);
+    expect(fetches, 1);
+    r.debugSocketDown();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(opens, 2);
+    expect(fetches, 2);
+    expect(channels[1].sent.length, 1);
+    expect(channels[1].sent.first, contains('"op":"sub"'));
+    expect(r.status, StreamStatus.live);
+    await r.stop();
+    await channels[0].dispose();
+    await channels[1].dispose();
+  });
+
+  test('no reconnect after stop', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    int opens = 0;
+    final VehicleRepository r = VehicleRepository(
+      fetchSnapshot: (_) async => const <ClientVehicle>[],
+      openChannel: (_) async {
+        opens += 1;
+        return channel;
+      },
+      wsBaseUrl: () => 'ws://127.0.0.1:8080',
+      clock: clock,
+      launch: (Future<void> task) => unawaited(task),
+      reconnectDelays: const <int>[60],
+    );
+    await r.start(7);
+    expect(opens, 1);
+    r.debugSocketDown();
+    await r.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(opens, 1);
+    await channel.dispose();
+  });
 }

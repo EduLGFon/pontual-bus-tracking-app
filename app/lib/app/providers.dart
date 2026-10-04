@@ -205,7 +205,14 @@ final vehicleRepoProvider = Provider.family<VehicleRepository, int>((
           )
           .toList();
     },
-    openChannel: (Uri url) async => WebSocketChannel.connect(url),
+    openChannel: (Uri url) {
+      final WebSocketChannel channel = WebSocketChannel.connect(url);
+      // A failed connect completes `ready` with an error in addition to
+      // the stream error the repository already handles. Without this the
+      // `ready` future escapes to the zone as an uncaught error on web.
+      unawaited(channel.ready.then<void>((_) {}, onError: (_) {}));
+      return Future<WebSocketChannel>.value(channel);
+    },
     wsBaseUrl: () => wsBaseUrlOf(apiBaseUrl),
     clock: SystemClock(),
     launch: (Future<void> task) {

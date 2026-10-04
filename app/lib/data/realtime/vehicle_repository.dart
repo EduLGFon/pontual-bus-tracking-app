@@ -90,6 +90,11 @@ typedef ChannelFactory = Future<WebSocketChannel> Function(Uri url);
 /// Fetches one snapshot over HTTP. Injectable for tests.
 typedef SnapshotFetcher = Future<List<ClientVehicle>> Function(int lineId);
 
+/// Reconnect delays in seconds: 5, 10, 20, then 30 s until the screen
+/// goes away. The socket is re-established while polling covers the data,
+/// per the failure matrix (PLAN.md 11.3).
+const List<int> reconnectDelaysS = <int>[5, 10, 20, 30];
+
 /// Vehicle stream for one line with snapshot, socket, watchdog, polling.
 // ignore_for_file: prefer_initializing_formals - injected dependencies keep
 // stable public names while the fields stay private.
@@ -101,17 +106,20 @@ class VehicleRepository {
     required String Function() wsBaseUrl,
     required Clock clock,
     required void Function(Future<void> task) launch,
+    List<int> reconnectDelays = reconnectDelaysS,
   }) : _fetchSnapshot = fetchSnapshot,
        _openChannel = openChannel,
        _wsBaseUrl = wsBaseUrl,
        _clock = clock,
-       _launch = launch;
+       _launch = launch,
+       _reconnectDelays = reconnectDelays;
 
   final SnapshotFetcher _fetchSnapshot;
   final ChannelFactory _openChannel;
   final String Function() _wsBaseUrl;
   final Clock _clock;
   final void Function(Future<void> task) _launch;
+  final List<int> _reconnectDelays;
 
   /// Currently watched line, if started.
   int? get lineId => _lineId;
@@ -134,6 +142,8 @@ class VehicleRepository {
   StreamSubscription<dynamic>? _sub;
   Timer? _watchdog;
   Timer? _poller;
+  Timer? _reconnect;
+  int _reconnectAttempt = 0;
   int? _socketDownAtMs;
   bool _stopped = true;
 
@@ -142,6 +152,7 @@ class VehicleRepository {
     await stop();
     _stopped = false;
     _lineId = lineId;
+    _reconnectAttempt = 0;
     _status = StreamStatus.connecting;
     await _resync();
     if (_stopped) {
@@ -151,13 +162,15 @@ class VehicleRepository {
     _armWatchdog();
   }
 
-  /// Stops everything: socket, watchdog, polling. Safe to call twice.
+  /// Stops everything: socket, watchdog, polling, reconnect. Safe to call twice.
   Future<void> stop() async {
     _stopped = true;
     _watchdog?.cancel();
     _watchdog = null;
     _poller?.cancel();
     _poller = null;
+    _reconnect?.cancel();
+    _reconnect = null;
     await _sub?.cancel();
     _sub = null;
     try {
@@ -210,6 +223,9 @@ class VehicleRepository {
       }
       _channel = channel;
       _socketDownAtMs = null;
+      _reconnectAttempt = 0;
+      _reconnect?.cancel();
+      _reconnect = null;
       _poller?.cancel();
       _poller = null;
       channel.sink.add(
@@ -253,6 +269,38 @@ class VehicleRepository {
     _channel = null;
     _socketDownAtMs ??= _clock.monotonicMs();
     _armPoller();
+    _armReconnect();
+  }
+
+  /// Schedules one reconnect attempt with backoff. A fresh snapshot is
+  /// taken on success; failure re-arms through [_onSocketDown]. Leaving
+  /// the screen ([stop]) cancels the timer.
+  void _armReconnect() {
+    if (_stopped || _channel != null || _reconnect != null) {
+      return;
+    }
+    final int index = _reconnectAttempt < _reconnectDelays.length
+        ? _reconnectAttempt
+        : _reconnectDelays.length - 1;
+    _reconnectAttempt++;
+    _reconnect = Timer(Duration(seconds: _reconnectDelays[index]), () {
+      _reconnect = null;
+      if (_stopped || _channel != null) {
+        return;
+      }
+      _launch(_reconnectBody());
+    });
+  }
+
+  Future<void> _reconnectBody() async {
+    if (_stopped || _channel != null) {
+      return;
+    }
+    await _connect();
+    if (!_stopped && _channel != null) {
+      // Snapshot on reconnect, per the failure matrix.
+      await _resync();
+    }
   }
 
   void _armWatchdog() {
