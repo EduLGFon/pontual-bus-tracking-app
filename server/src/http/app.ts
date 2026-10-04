@@ -69,6 +69,24 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
     );
   });
 
+  app.options("*", (c) => {
+    // CORS preflight: browsers send OPTIONS before non-simple requests
+    // (POST with a JSON body, DELETE, authed calls). Without this the
+    // preflight 404s and the browser blocks the real request.
+    const origin = c.req.header("origin");
+    if (origin && opts.allowedOrigins.includes(origin)) {
+      c.header("access-control-allow-origin", origin);
+      c.header("vary", "Origin");
+      c.header("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
+      c.header(
+        "access-control-allow-headers",
+        "authorization, content-type",
+      );
+      c.header("access-control-max-age", "86400");
+    }
+    return c.body(null, 204);
+  });
+
   app.get("/v1/health", (c) => {
     recordHealthCheck();
     return c.json({ ok: true });
@@ -103,8 +121,10 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
   }
 
   app.notFound((c) => c.json({ code: "not_found" }, 404));
-  app.onError((_err, c) => {
-    console.log(JSON.stringify({ level: "error", msg: "unhandled" }));
+  app.onError((err, c) => {
+    console.log(
+      JSON.stringify({ level: "error", msg: "unhandled", err: String(err) }),
+    );
     return c.json({ code: "internal" }, 500);
   });
 

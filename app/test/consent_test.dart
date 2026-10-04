@@ -56,7 +56,7 @@ void main() {
     expect(await const ConsentStore().read(), 1);
   });
 
-  test('covering version skips sheet and post', () async {
+  test('covering version skips sheet but reconciles the post', () async {
     await const ConsentStore().write(1);
     int posts = 0;
     int sheets = 0;
@@ -74,7 +74,19 @@ void main() {
     );
     expect(result, ConsentResult.granted);
     expect(sheets, 0);
-    expect(posts, 0);
+    expect(posts, 1);
+  });
+
+  test('covering version with failed reconcile stays pending', () async {
+    await const ConsentStore().write(1);
+    final ConsentResult result = await ensureConsent(
+      currentVersion: 1,
+      store: const ConsentStore(),
+      showSheet: () async => true,
+      postConsents: () async => const Err<bool>(NetworkFailure('offline')),
+    );
+    expect(result, ConsentResult.offlinePending);
+    expect(await const ConsentStore().read(), 1);
   });
 
   test('version bump requires consent again', () async {

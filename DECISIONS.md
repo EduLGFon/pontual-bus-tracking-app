@@ -736,3 +736,42 @@ request history; the entries below supersede it where decided.
   steady 403s were a browser page on a non-allow-listed origin (the
   exact case the origin check exists for); the reporter's console spam
   from that case is fixed by the ready-sink above.
+- 2026-10-04: CORS preflight was missing server-side. The hand-rolled
+  CORS in `server/src/http/app.ts` set ACAO on real responses but had no
+  OPTIONS route, so browsers blocked every non-simple request (POST with
+  JSON body, DELETE, authed calls) while plain GETs worked. Symptom on
+  web: map showed "Ao vivo" (GET snapshot + WS ok once the origin was
+  allow-listed) but "Estou no onibus" died silently at POST /v1/devices
+  (preflight ERR_FAILED, registration never completed). Added an
+  `app.options("*")` handler returning 204 with ACAO + allow-methods
+  (GET, POST, DELETE, OPTIONS) + allow-headers (authorization,
+  content-type) for allow-listed origins only, and extended the AC18
+  test with allowed/denied preflight cases. Verified: deno fmt, lint,
+  check clean; security_test.ts 6/6 green against a throwaway local DB.
+  Local web must still run on `--web-port 5000` to match ALLOWED_ORIGINS.
+- 2026-10-04: VPS database had no schema: POST /v1/devices failed with
+  `relation "devices" does not exist` and the config refresh kept
+  failing, while in-memory GETs worked. This also motivated logging the
+  error text (not secrets) in the `unhandled` and `config refresh
+  failed` server log lines. First `dbmate up` rolled back: the VPS user
+  lacked CREATEROLE for the `pontual_app` role creation in 0001_init.
+  Owner granted CREATEROLE on the VPS, reran `dbmate up` (dbmate 2.36.0):
+  0001_init applied, 0 pending. Follow-up: switch server DATABASE_URL to
+  least-privilege `pontual_app` per PLAN 6.4 (needs a password set
+  outside migrations).
+- 2026-10-04: Trip start 403 `consent` after the DB/CORS fixes, root-caused
+  to stale local consent. Earlier failed runs wrote the accepted version
+  to local storage before the server POST failed, and `ensureConsent`
+  treated local coverage as granted without reposting, so the server
+  never recorded consent and the trip guard kept rejecting. Fixed
+  `app/lib/features/trip/consent_flow.dart` to reconcile the server
+  record on every start (server upserts, safe to repost); truly offline
+  runs still return offlinePending. Updated the covering-version test
+  and added a failed-reconcile case. Full app suite: 134 green, 1 skipped.
+- 2026-10-04: Owner asked that idle buses appear on watcher maps. Checked
+  against PLAN.md 6.6 step 9, which deliberately never publishes a
+  stopped lone trip (phantom-bus risk). Presented the trade-off; owner
+  chose to keep PLAN, no engine change. Consequence for field testing:
+  a share started while stationary publishes nothing until the device
+  moves (moving_ticks_to_publish), and sitting still ends the trip as
+  idle; validate on a moving bus outdoors.

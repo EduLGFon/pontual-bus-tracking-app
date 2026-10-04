@@ -213,6 +213,34 @@ Deno.test("AC18: secure headers and CORS behavior", async () => {
       headers: { origin: "https://evil.example" },
     });
     assertEquals(denied.headers.get("access-control-allow-origin"), null);
+
+    const preflight = await hono.request("/v1/devices", {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://127.0.0.1:8080",
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    assertEquals(preflight.status, 204);
+    assertEquals(
+      preflight.headers.get("access-control-allow-origin"),
+      "http://127.0.0.1:8080",
+    );
+    assertEquals(
+      preflight.headers.get("access-control-allow-methods"),
+      "GET, POST, DELETE, OPTIONS",
+    );
+
+    const preflightDenied = await hono.request("/v1/devices", {
+      method: "OPTIONS",
+      headers: { origin: "https://evil.example" },
+    });
+    assertEquals(preflightDenied.status, 204);
+    assertEquals(
+      preflightDenied.headers.get("access-control-allow-origin"),
+      null,
+    );
   } finally {
     await sql.end();
   }

@@ -87,9 +87,13 @@ export function startJobs(deps: JobsDeps): Jobs {
       // while the database is down. See DECISIONS.md T34-fix.
       try {
         deps.onConfig(await runConfigRefresh(deps.sql));
-      } catch {
+      } catch (e) {
         console.log(
-          JSON.stringify({ level: "error", msg: "config refresh failed" }),
+          JSON.stringify({
+            level: "error",
+            msg: "config refresh failed",
+            err: String(e),
+          }),
         );
       }
     }, deps.configRefreshMs),
