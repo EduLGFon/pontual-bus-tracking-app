@@ -150,7 +150,5 @@ String _messageFor(StartFailure? reason) {
 
 /// Shows a short explanation where the tap happened.
 void _tell(BuildContext context, String message) {
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(message)));
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }

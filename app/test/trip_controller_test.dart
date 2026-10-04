@@ -32,6 +32,23 @@ class FakeGateway implements PermissionGateway {
   Future<void> openSettings() async {}
 }
 
+/// Gateway that always denies permission, for the denial path test.
+class _DeniedGateway implements PermissionGateway {
+  @override
+  Future<LocationPermissionState> check() async =>
+      LocationPermissionState.denied;
+
+  @override
+  Future<LocationPermissionState> request() async =>
+      LocationPermissionState.denied;
+
+  @override
+  Future<bool> servicesOn() async => true;
+
+  @override
+  Future<void> openSettings() async {}
+}
+
 Position pos(double lat, double lng) {
   return Position(
     latitude: lat,
@@ -47,7 +64,11 @@ Position pos(double lat, double lng) {
   );
 }
 
-TripController controller(MockClient client) {
+TripController controller(
+  MockClient client, {
+  bool feed = true,
+  PermissionGateway? gateway,
+}) {
   String? token;
   // ignore: close_sinks - single buffered test event; the service owns it.
   final StreamController<Position> positions = StreamController<Position>();
@@ -59,7 +80,7 @@ TripController controller(MockClient client) {
         readToken: () async => token,
         writeToken: (String t) async => token = t,
       ),
-      gateway: FakeGateway(),
+      gateway: gateway ?? FakeGateway(),
       consentStore: const ConsentStore(),
       consentVersion: 1,
       locations: () => LocationService(
@@ -71,10 +92,12 @@ TripController controller(MockClient client) {
       clock: FakeClock(100000),
     ),
   );
-  // Feed one fix on the next microtask so starts observe it.
-  scheduleMicrotask(() {
-    positions.add(pos(-18.72, -39.85));
-  });
+  if (feed) {
+    // Feed one fix on the next microtask so starts observe it.
+    scheduleMicrotask(() {
+      positions.add(pos(-18.72, -39.85));
+    });
+  }
   return controller;
 }
 
@@ -121,6 +144,124 @@ void main() {
     await c.endTrip();
     expect(c.state, isA<TripIdle>());
     expect(c.endKind, TripEndKind.user);
+    c.dispose();
+  });
+
+  test('no fix within the timeout reports noGps', () async {
+    final TripController c = controller(happy(), feed: false);
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+      firstFixTimeout: const Duration(milliseconds: 50),
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.noGps);
+    expect(c.state, isA<TripIdle>());
+    c.dispose();
+  });
+
+  test('registration failure reports offline', () async {
+    final MockClient client = MockClient((http.Request req) async {
+      throw http.ClientException('unreachable');
+    });
+    final TripController c = controller(client);
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.offline);
+    expect(c.state, isA<TripIdle>());
+    c.dispose();
+  });
+
+  test('registration server error reports failed', () async {
+    final MockClient client = MockClient((http.Request req) async {
+      if (req.url.path == '/v1/devices') {
+        return http.Response('{}', 500);
+      }
+      return http.Response('{}', 404);
+    });
+    final TripController c = controller(client);
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.failed);
+    expect(c.state, isA<TripIdle>());
+    c.dispose();
+  });
+
+  test('rate-limited start reports busy', () async {
+    final MockClient client = MockClient((http.Request req) async {
+      final String path = req.url.path;
+      if (path == '/v1/devices') {
+        return http.Response('{"token":"bm1_t","exp":1,"id":"d"}', 201);
+      }
+      if (path == '/v1/consents') {
+        return http.Response('{"ok":true}', 200);
+      }
+      if (path == '/v1/trip') {
+        return http.Response('{"e":"rate"}', 429);
+      }
+      return http.Response('{}', 404);
+    });
+    final TripController c = controller(client);
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.busy);
+    c.dispose();
+  });
+
+  test('consent rejection clears the posted flag for a repost', () async {
+    final MockClient client = MockClient((http.Request req) async {
+      final String path = req.url.path;
+      if (path == '/v1/devices') {
+        return http.Response('{"token":"bm1_t","exp":1,"id":"d"}', 201);
+      }
+      if (path == '/v1/consents') {
+        return http.Response('{"ok":true}', 200);
+      }
+      if (path == '/v1/trip') {
+        return http.Response('{"e":"consent"}', 403);
+      }
+      return http.Response('{}', 404);
+    });
+    final TripController c = controller(client);
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.failed);
+    expect(await const ConsentStore().readPosted(), isNull);
+    c.dispose();
+  });
+
+  test('denied permission reports permission', () async {
+    final TripController c = controller(happy(), gateway: _DeniedGateway());
+    final bool started = await c.startTrip(
+      lineId: 7,
+      lineLabel: '7',
+      showConsent: () async => true,
+      showPermissions: () async {},
+    );
+    expect(started, isFalse);
+    expect(c.failReason, StartFailure.permission);
     c.dispose();
   });
 

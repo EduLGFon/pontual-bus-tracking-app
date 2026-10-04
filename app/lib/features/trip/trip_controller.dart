@@ -243,7 +243,7 @@ class TripController extends ChangeNotifier {
 
     final Result<String> reg = await _deps.api.ensureRegistered();
     if (reg is Err<String>) {
-      _failReason = _classify((reg as Err<String>).failure);
+      _failReason = _classify(reg.failure);
       _set(const TripIdle());
       return false;
     }
@@ -276,7 +276,7 @@ class TripController extends ChangeNotifier {
     );
     if (started is Err<TripInstruction>) {
       await _stopLocal();
-      final AppFailure failure = (started as Err<TripInstruction>).failure;
+      final AppFailure failure = started.failure;
       _failReason = _classify(failure);
       if (failure is ServerFailure && failure.code == 'consent') {
         // Server never recorded our consent: forget the confirmation so
