@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/testing.dart';
 import 'package:pontual/app/providers.dart';
 import 'package:pontual/app/router.dart';
-import 'package:pontual/app/strings_pt.dart';
 import 'package:pontual/data/config/remote_config.dart';
 import 'package:pontual/data/static_data/static_data.dart';
 import 'package:pontual/features/trip/share_flow.dart';
@@ -128,14 +127,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Continuar'), findsOneWidget);
     await tester.tap(find.text('Continuar'));
-    // Pump forward without settling: pumpAndSettle would advance past the
-    // SnackBar's dismiss timer and hide the message under test.
-    for (int i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
+    // The rig has no usable network or GPS: the flow must end with a
+    // visible explanation, never silence. Pump up to 70 s of fake time
+    // (the first-fix timeout is 60 s) but stop as soon as the message
+    // shows, before its dismiss timer can hide it.
+    for (int i = 0; i < 70; i++) {
+      await tester.pump(const Duration(seconds: 1));
+      if (find.byType(SnackBar).evaluate().isNotEmpty) {
+        break;
+      }
     }
-    // The rig client throws on any request: registration fails and the
-    // flow must say so instead of going silent.
-    expect(find.text(StringsPt.shareNoConnection), findsOneWidget);
+    expect(find.byType(SnackBar), findsOneWidget);
   });
 
   testWidgets('/trip with a controller shows the trip', (

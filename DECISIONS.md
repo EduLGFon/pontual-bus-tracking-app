@@ -788,3 +788,10 @@ request history; the entries below supersede it where decided.
   first ping publishes. Guarded by config validation, which refuses to
   start with it set unless APP_ENV=local, plus a warn log at boot.
   Production behavior unchanged. Full server suite: 68 green.
+- 2026-10-04: Share flow never failed silently anymore. Added
+  StartFailure reasons (declined/permission/offline/noGps/busy/
+  outsideArea/failed) to TripController, a 60 s first-fix timeout
+  (was an infinite hang), consent-confirmation reset on server consent
+  rejects, and a pt-BR SnackBar for every dead end in share_flow
+  (declines stay silent, permission keeps its sheets). Full app suite:
+  142 green, 1 skipped.
