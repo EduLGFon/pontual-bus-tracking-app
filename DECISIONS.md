@@ -721,3 +721,18 @@ request history; the entries below supersede it where decided.
   Proven on chrome against a dead port (3 opens, contained, clean stop)
   and covered by 2 new `vehicle_test` cases. Full suites: VM analyze
   clean plus 133 green, chrome 133 green.
+- 2026-10-04: T46 first 8-hour soak died at ~67 min, root-caused, restarted.
+  The sim drifted buses east at 8 m/s forever, exiting the city bbox
+  (lngMax -39.55) after ~0.3 deg; every out-of-bbox fix strikes, so all
+  18 trips abuse-ended within minutes of each other. The engine behaved
+  exactly as designed; the load driver was wrong. Fixed in `tools/sim`:
+  buses bounce inside bbox-margin edges with matching headings, and the
+  sim resumes on 404-gone like a real client (KL6), counting resumes
+  apart from errors. 90 s smoke of the patched sim: 324 pings,
+  3 hand-overs, 304 WS snapshots, p50 2 ms, p95 11 ms, zero errors.
+  Fresh 8-hour soak (3 buses, 6 riders, line 60, seed 7) started ~14:20
+  UTC; result lands here on completion (~22:20 UTC). Also settled the
+  browser 403s in the access log: Deno sim connects clean (101), so the
+  steady 403s were a browser page on a non-allow-listed origin (the
+  exact case the origin check exists for); the reporter's console spam
+  from that case is fixed by the ready-sink above.
