@@ -147,6 +147,15 @@ class VehicleRepository {
   int? _socketDownAtMs;
   bool _stopped = true;
 
+  /// Monotonic time of the last valid stream frame (any JSON object,
+  /// including heartbeats) in ms. Heartbeats prove the socket is alive
+  /// even when no vehicle snapshots arrive.
+  int? _lastFrameAtMs;
+
+  /// True while a snapshot fetch is in flight; overlapping ticks skip
+  /// instead of stacking concurrent GETs.
+  bool _resyncing = false;
+
   /// Starts watching [lineId]: snapshot first, then the stream.
   Future<void> start(int lineId) async {
     await stop();
@@ -180,6 +189,7 @@ class VehicleRepository {
     }
     _channel = null;
     _lineId = null;
+    _lastFrameAtMs = null;
   }
 
   /// Ages the status against the fake-friendly monotonic clock.
@@ -196,15 +206,18 @@ class VehicleRepository {
 
   Future<void> _resync() async {
     final int? line = _lineId;
-    if (line == null || _stopped) {
+    if (line == null || _stopped || _resyncing) {
       return;
     }
+    _resyncing = true;
     try {
       _vehicles = await _fetchSnapshot(line);
       _lastSnapshotAtMs = _clock.monotonicMs();
       evaluateAge();
     } catch (_) {
       _status = StreamStatus.offline;
+    } finally {
+      _resyncing = false;
     }
   }
 
@@ -249,6 +262,9 @@ class VehicleRepository {
     try {
       final Map<String, dynamic> decoded =
           jsonDecode(msg as String) as Map<String, dynamic>;
+      // Any valid frame (snapshot, heartbeat, server notice) proves
+      // the socket is alive, even with no vehicle rows in it.
+      _lastFrameAtMs = _clock.monotonicMs();
       final List<dynamic>? rows = decoded['v'] as List<dynamic>?;
       if (rows == null) {
         return;
@@ -268,7 +284,11 @@ class VehicleRepository {
   void _onSocketDown() {
     _channel = null;
     _socketDownAtMs ??= _clock.monotonicMs();
-    _armPoller();
+    // Frames from the dead socket prove nothing about the next one.
+    _lastFrameAtMs = null;
+    // No immediate poller: the watchdog arms polling only after
+    // pollFallbackAfterS of downtime, while reconnect (5-30 s) covers
+    // transient blips without doubling HTTP traffic.
     _armReconnect();
   }
 
@@ -317,7 +337,14 @@ class VehicleRepository {
     evaluateAge();
     final int? last = _lastSnapshotAtMs;
     final int now = _clock.monotonicMs();
-    if (last == null || now - last > watchdogResyncS * 1000) {
+    final int? frameAt = _lastFrameAtMs;
+    // A fresh frame (snapshot or heartbeat) proves the socket is alive,
+    // so quiet-but-connected lines (e.g. no buses) do not resync.
+    final bool socketProven = _channel != null &&
+        frameAt != null &&
+        now - frameAt <= watchdogResyncS * 1000;
+    if (!socketProven &&
+        (last == null || now - last > watchdogResyncS * 1000)) {
       // Fire and forget by design: the next tick retries on failure.
       _launch(_resync());
     }
@@ -335,7 +362,7 @@ class VehicleRepository {
     }
     _poller = Timer.periodic(const Duration(seconds: pollIntervalS), (_) {
       if (!_stopped) {
-        _resync();
+        _launch(_resync());
       }
     });
   }

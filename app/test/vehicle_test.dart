@@ -172,11 +172,47 @@ void main() {
     await r.start(7);
     expect(r.debugPolling, isFalse);
     r.debugSocketDown();
+    // No immediate poller: reconnect covers transient blips first.
+    expect(r.debugPolling, isFalse);
     clock.advance(31000);
     r.debugWatchdogTick();
     expect(r.debugPolling, isTrue);
     await r.stop();
     expect(r.debugPolling, isFalse);
+    await channel.dispose();
+  });
+
+  test('heartbeats prove liveness without snapshots', () async {
+    final FakeClock clock = FakeClock(100000);
+    final FakeChannel channel = FakeChannel();
+    int fetches = 0;
+    final VehicleRepository r = VehicleRepository(
+      fetchSnapshot: (_) async {
+        fetches += 1;
+        return const <ClientVehicle>[];
+      },
+      openChannel: (_) async => channel,
+      wsBaseUrl: () => 'ws://127.0.0.1:8080',
+      clock: clock,
+      launch: (Future<void> task) => unawaited(task),
+    );
+    await r.start(7);
+    expect(fetches, 1);
+    // A heartbeat at 30 s keeps the quiet-but-connected line from
+    // resyncing when the snapshot would otherwise go stale.
+    clock.advance(30000);
+    channel.incoming.add('{"hb":100}');
+    await Future<void>.delayed(Duration.zero);
+    clock.advance(20000);
+    r.debugWatchdogTick();
+    await Future<void>.delayed(Duration.zero);
+    expect(fetches, 1);
+    // Once the heartbeat itself is stale, resync resumes.
+    clock.advance(30000);
+    r.debugWatchdogTick();
+    await Future<void>.delayed(Duration.zero);
+    expect(fetches, 2);
+    await r.stop();
     await channel.dispose();
   });
 
