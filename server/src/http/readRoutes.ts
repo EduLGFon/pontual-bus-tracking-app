@@ -70,6 +70,13 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
       return c.json({ e: "bad_request" }, 400);
     }
     const ip = ipOf(c);
+    // Refuse before upgrading: a close frame cannot be delivered on a
+    // socket whose handshake never completed, so answer 503 with a
+    // Retry-After the client can honor instead of a stillborn 101.
+    if (!deps.hub.fits(ip)) {
+      c.header("Retry-After", "5");
+      return c.json({ e: "capacity" }, 503);
+    }
     const { socket, response } = Deno.upgradeWebSocket(c.req.raw, {
       idleTimeout: 60,
     });

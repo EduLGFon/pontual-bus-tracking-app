@@ -59,6 +59,12 @@ export class Hub {
     return conn;
   }
 
+  /** True when a new connection from ip fits the caps. No state change. */
+  fits(ip: string): boolean {
+    if (this.conns.size >= this.opts.maxConnections) return false;
+    return (this.perIp.get(ip) ?? 0) + 1 <= this.opts.maxPerIp;
+  }
+
   disconnect(conn: Conn): void {
     if (!this.conns.delete(conn)) return;
     const n = (this.perIp.get(conn.ip) ?? 1) - 1;
@@ -144,6 +150,14 @@ export class Hub {
         this.disconnect(conn);
         continue;
       }
+      // Same backpressure guards as broadcast: a wedged socket must be
+      // reaped, not fed forever.
+      if (conn.socket.bufferedAmount > 1024 * 1024) {
+        conn.socket.close(1013, "backpressure");
+        this.disconnect(conn);
+        continue;
+      }
+      if (conn.socket.bufferedAmount > 256 * 1024) continue;
       try {
         conn.socket.send(payload);
       } catch {
