@@ -181,7 +181,9 @@ class _MapTabState extends ConsumerState<MapTab> {
           children: <Widget>[
             Icon(Icons.circle, color: dot, size: 12),
             const SizedBox(width: 8),
-            Text(text),
+            Expanded(
+              child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
       ),

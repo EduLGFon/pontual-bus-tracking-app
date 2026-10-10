@@ -40,7 +40,11 @@ class LineScreen extends ConsumerWidget {
           child: Scaffold(
             appBar: AppBar(
               leading: BackButton(onPressed: () => context.go('/')),
-              title: Text(line.name),
+              title: Text(
+                line.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               bottom: const TabBar(
                 tabs: <Widget>[
                   Tab(text: 'Mapa'),
