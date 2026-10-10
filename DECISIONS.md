@@ -988,3 +988,21 @@ request history; the entries below supersede it where decided.
   1 Hz), and debounce the permission-revoked poll in TripSupervisor
   (Firefox died by instant `permissionRevoked` from the Permissions
   API reporting `prompt`; 3 consecutive polls before ending).
+- 2026-10-10: Field-test follow-ups. (1) TEST_EASY_PUBLISH=true with
+  APP_ENV=local on this host (owner order): publish on the first ping
+  with the accuracy gate at 500, verified live with a stationary
+  spd-0 acc-300 fix publishing at once (`live:[[60,1]]`, W to L).
+  Temporary for testing; revert before any pilot (KL2: a lone
+  stationary phone now draws a bus). Note: the Pages PWA still drops
+  fixes coarser than 60 m client-side (FIX_ACCURACY_MAX_M not baked
+  into the web build), so indoor phones also need that dart-define via
+  a workflow change. (2) Client fix written here without a local
+  Flutter toolchain (commit `72d51dd`): paced sends plus 3-poll
+  permission debounce plus tests; CI is the verifier, then
+  deploy-static republishes the PWA on merge/push. (3) WS drops on
+  good wifi: infra is stable (tunnel 0 restarts, 0 errors; API
+  healthy; 0 stream rejects since the origin fix). Upgrade timestamps
+  cluster inside viewing sessions (~20-40 s apart while testing),
+  consistent with client-side drops, but the cause needs browser
+  console evidence (close codes + times) correlated with the API log.
+  Next step is a console-logged repro from the phones.
