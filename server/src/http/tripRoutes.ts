@@ -12,6 +12,7 @@ import { applyPing, endTrip, isGone, startTrip } from "../domain/ping.ts";
 import type { Store } from "../state/store.ts";
 import { authMiddleware } from "../security/auth.ts";
 import { RateLimiter } from "../security/rateLimit.ts";
+import { recordHttp403, recordHttp429 } from "../observability/metrics.ts";
 import { TripPingBody, TripStartBody } from "./tripSchemas.ts";
 import type { EngineConfig, EngineEvent } from "../domain/types.ts";
 
@@ -82,10 +83,12 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
       return c.json({ e: "maint" }, 503);
     }
     if (await isBlocked(deps.sql, deviceId)) {
+      recordHttp403();
       return c.json({ e: "blocked" }, 403);
     }
     const consent = await latestConsentVersion(deps.sql, deviceId);
     if (consent !== rt.consentVersion) {
+      recordHttp403();
       return c.json({ e: "consent" }, 403);
     }
     return null;
@@ -110,6 +113,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
     const limiter = resume ? resumesPerDevice : startsPerDevice;
     if (!limiter.hit(deviceId, Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "quota" }, 429);
     }
     const events: EngineEvent[] = [];
@@ -150,6 +154,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
     const deviceId = c.get("deviceId");
     if (!pingsPerDevice.hit(deviceId, Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "rate" }, 429);
     }
     const body = await readBody(c);

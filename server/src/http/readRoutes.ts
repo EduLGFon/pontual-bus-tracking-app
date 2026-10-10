@@ -3,6 +3,12 @@
 import { Hono } from "@hono/hono";
 import type { LineResolver } from "../data/lines.ts";
 import { defaultEngineConfig } from "../domain/types.ts";
+import {
+  recordHttp403,
+  recordHttp429,
+  recordWsCapacityRefused,
+  recordWsConnect,
+} from "../observability/metrics.ts";
 import { lineSnapshot, livePayload } from "../state/snapshots.ts";
 import type { Store } from "../state/store.ts";
 import { RateLimiter } from "../security/rateLimit.ts";
@@ -30,6 +36,7 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
   app.get("/v1/lines/:id/vehicles", (c) => {
     if (!vehiclesPerIp.hit(ipOf(c), Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "rate" }, 429);
     }
     const id = Number(c.req.param("id"));
@@ -53,6 +60,7 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
   app.get("/v1/live", (c) => {
     if (!livePerIp.hit(ipOf(c), Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "rate" }, 429);
     }
     const { body } = livePayload(deps.store, Date.now(), cfg.publishTtlS);
@@ -63,6 +71,7 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
   app.get("/v1/stream", (c) => {
     const origin = c.req.header("origin");
     if (origin && !deps.allowedOrigins.includes(origin)) {
+      recordHttp403();
       return c.json({ e: "auth" }, 403);
     }
     const upgrade = c.req.header("upgrade");
@@ -75,6 +84,7 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
     // Retry-After the client can honor instead of a stillborn 101.
     if (!deps.hub.fits(ip)) {
       c.header("Retry-After", "5");
+      recordWsCapacityRefused();
       return c.json({ e: "capacity" }, 503);
     }
     const { socket, response } = Deno.upgradeWebSocket(c.req.raw, {
@@ -82,9 +92,11 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
     });
     const conn = deps.hub.connect(socket, ip);
     if (!conn) {
+      recordWsCapacityRefused();
       socket.close(1013, "capacity");
       return response;
     }
+    recordWsConnect();
     socket.onmessage = (ev) => {
       const reply = deps.hub.onMessage(
         conn,
