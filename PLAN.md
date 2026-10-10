@@ -406,7 +406,7 @@ flowchart LR
   API --> ENG["Domain engine, in-memory state"]
   ENG -->|"events"| HUB["WebSocket hub"]
   API --> DB[("PostgreSQL, localhost or private net")]
-  SD -->|"HTTPS GET static JSON"| CDN["Cloudflare Pages"]
+  SD -->|"HTTPS GET static JSON"| CDN["GitHub Pages"]
   MON["External uptime check"] -->|"GET /v1/health"| CF
 ```
 
@@ -415,7 +415,7 @@ flowchart LR
 | Component                   | Does                                                                                                                 | Must NOT                                                                                        |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | **Flutter app**             | UI, consent, location sampling, ping client, map, static data cache                                                  | hold server secrets, trust its own validation, log coordinates                                  |
-| **Cloudflare Pages**        | hosts the Web build, static JSON (`manifest.json`, `config.json`, `lines.<hash>.json`, `routes/*.json`), legal pages | store user data                                                                                 |
+| **GitHub Pages**          | hosts the Web build, static JSON (`manifest.json`, `config.json`, `lines.<hash>.json`, `routes/*.json`), legal pages | store user data                                                                                 |
 | **Cloudflare proxy**        | TLS, DDoS absorption, caching of public snapshot endpoints, hides origin IP                                          | be the only defence (origin still validates everything)                                         |
 | **Caddy (VPS)**             | terminates origin TLS, forwards to `127.0.0.1`, sets size/time limits, minimal or no access logs                     | log IPs or bodies                                                                               |
 | **Deno API**                | validation, authentication, authorisation, rate limits, domain engine, WebSocket hub, jobs                           | run as root, accept DB access from clients, write coordinates anywhere                          |
@@ -936,9 +936,11 @@ latency weekly (section 18).
   5. A **server data bundle** (the same lines JSON and route files) deployed
      with the API release to `DATA_DIR`; the API loads it at boot and on
      `SIGHUP`.
-- Build output is deployed to Cloudflare Pages with cache headers:
-  `manifest.json` and `config.json` → `Cache-Control: no-cache` (use ETag);
-  hashed files → `public, max-age=31536000, immutable`.
+- Build output is deployed to GitHub Pages (which sets its own cache
+  headers with ETag revalidation): hashed files (`lines.<hash>.json`,
+  `routes/*.<hash>.json`) are immutable by name; the app fetches
+  `manifest.json` at most once per day (conditional GET) and downloads
+  a new `lines.<hash>.json` only if the name changed.
 - The app **bundles** the latest `lines.json` + `manifest.json` as assets (first
   run works offline). At runtime it fetches `manifest.json` at most once per day
   (conditional GET), downloads a new `lines.<hash>.json` only if the name
@@ -1877,8 +1879,11 @@ IPs; in-memory buckets only.
 
 ### 12.5 Web hardening (MUST)
 
-Cloudflare Pages `_headers` (draft; test with the real Flutter build and
-adjust):
+The data tool still generates a Cloudflare-style `_headers` draft
+(CSP, HSTS, cache rules) for documentation and for a future move off
+GitHub Pages, but Pages does not serve it: TLS comes from Pages, and
+CSP/HSTS/cache headers are limited to Pages defaults in alpha (accepted,
+recorded in DECISIONS.md).
 
 ```
 /*
@@ -1901,8 +1906,10 @@ adjust):
   see user IPs, shortens the critical path, and lets the CSP stay tight. If
   Roboto still loads from `fonts.gstatic.com`, bundle a minimal font or use a
   system font stack for web (VERIFY; document the choice).
-- If `--wasm` requires cross-origin isolation (COOP/COEP), verify OSM tiles
-  still load; otherwise skip wasm.
+- `--wasm` stays on: the build ships a JS fallback and the bootstrap
+  loader uses it where cross-origin isolation (COOP/COEP) is absent, as
+  on GitHub Pages which cannot serve custom headers. OSM tiles are
+  plain `<img>` loads and unaffected either way.
 - Turn on Cloudflare Turnstile for `POST /v1/devices` on the **web client
   only**, and only if abuse is observed.
 
@@ -2530,8 +2537,8 @@ T39. Never cut: consent, delete-my-data, security tests, kill switch, auto-end.
 | Env                                                                                                                                                                                                                                                                         | Backend                                            | Static host      | Use                                 |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------- | ----------------------------------- |
 | local                                                                                                                                                                                                                                                                       | `deno task dev` + Docker PostgreSQL                | `flutter run`    | development, server tests           |
-| staging (optional)                                                                                                                                                                                                                                                          | second instance on the VPS (own port/DB/subdomain) | Pages preview    | simulator, integration, field tests |
-| prod                                                                                                                                                                                                                                                                        | main instance on the VPS                           | Pages production | pilot users                         |
+| staging (optional)                                                                                                                                                                                                                                                          | second instance on the VPS (own port/DB/subdomain) | same Pages site (no per-PR previews in alpha) | simulator, integration, field tests |
+| prod                                                                                                                                                                                                                                                                        | main instance on the VPS                           | GitHub Pages                  | pilot users                         |
 | Client env via `--dart-define-from-file=env/<env>.json` containing `API_BASE_URL` and `STATIC_BASE_URL`, plus the optional `FIX_ACCURACY_MAX_M` test override (default 60; easy-test phones use 500 to match a TEST_EASY_PUBLISH server; no secrets exist for clients). Server env lives in a root-owned env file on the host (never in git); `server/.env.example` lists the variable names only. |                                                    |                  |                                     |
 
 ### 17.2 CI workflows (GitHub Actions; pin actions by SHA; `permissions: contents: read` by default)
@@ -2540,7 +2547,7 @@ T39. Never cut: consent, delete-my-data, security tests, kill switch, auto-end.
    `deno lint`, `deno check`, `deno test` (with a PostgreSQL service container,
    including the security tests AC01-AC23 that can run in CI), data validation,
    gitleaks, manifest audit, size report.
-2. `deploy-static.yml` (main): build data + web -> Cloudflare Pages.
+2. `deploy-static.yml` (main): build data + web -> GitHub Pages.
 3. Server deploy: **manual in alpha** (the owner runs the deploy script from T05
    after CI is green). A GitHub workflow with a restricted deploy key is
    optional later; if added it uses a dedicated unprivileged deploy user, never

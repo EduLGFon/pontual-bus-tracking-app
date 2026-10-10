@@ -898,3 +898,30 @@ request history; the entries below supersede it where decided.
   manifest audit PASS, flutter analyze and dart format clean, full app
   suite green (154 passed, 1 skipped, pre-change tree; post-change tree
   touches no Dart code). Server smoke still needs CI (no local DB).
+- 2026-10-10: Static hosting moved from Cloudflare Pages to GitHub
+  Pages (owner order). Why: deploy-static.yml never succeeded; the
+  Cloudflare Pages project, DNS, and secrets were never created
+  (step.md lists them owner-blocked), while Pages needs no new
+  project or secrets, just Source: GitHub Actions plus the
+  API_ORIGIN repo var. API path unchanged (still VPS behind
+  Cloudflare); only the static web bundle and /data move. Workflow
+  now builds data plus web, assembles pages/ (web build, data files,
+  index.html copied to 404.html for go_router deep links, .nojekyll),
+  and deploys via upload-pages-artifact v5.0.0 plus deploy-pages
+  v5.0.1 (SHAs pinned, verified 2026-10-10). STATIC_ORIGIN defaults
+  to https://<owner>.github.io/<repo> with --base-href derived from
+  its path, so forks work without extra vars; only API_ORIGIN is
+  required (fail-fast message tells where to set it). Accepted
+  limitations: Pages cannot serve the custom `_headers` (CSP/HSTS/
+  immutable-cache rules do not apply; TLS comes from Pages; the data
+  tool still generates `_headers` as a draft), and COOP/COEP cannot
+  be set, so `--wasm` runs single-threaded with the bootstrap JS
+  fallback where isolation is absent. PLAN.md 5.2, 7.1, 12.5, 17.1,
+  17.2 updated.
+- 2026-10-10: release-android.yml would have failed on its first tag:
+  pushing a tag does not create a GitHub release, so `gh release
+  upload` had nothing to upload to. It now creates the release
+  (`--generate-notes`) when missing. STATIC_ORIGIN got the same
+  GitHub Pages default as deploy-static.yml, so only the API_ORIGIN
+  var is required. Added a 25 min timeout. Signing story unchanged
+  (debug signing until the keystore secrets exist).

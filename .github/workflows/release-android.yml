@@ -1,14 +1,15 @@
 # Release Android AAB on tags (T45). Builds the release bundle with
 # Dart obfuscation, audits the merged manifest, enforces the size
-# gate, and attaches the AAB to the GitHub release.
+# gate, creates the GitHub release if needed, and attaches the AAB.
 #
 # Owner-blocked before the first tag: upload-signing keystore as
 # encrypted secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS,
 # ANDROID_KEY_PASSWORD, ANDROID_STORE_PASSWORD. Until then the
 # build uses debug signing and is install-test only.
-# Also needs repo vars API_ORIGIN (e.g. https://api.example.com) and
-# STATIC_ORIGIN (e.g. https://pontual.pages.dev); the AAB bakes them
-# in via --dart-define. Without them the app would call localhost.
+# Also needs repo var API_BASE_URL (e.g. https://api.example.com); the AAB
+# bakes it in via --dart-define. STATIC_ORIGIN defaults to this repo's
+# GitHub Pages URL (where deploy-static.yml publishes /data) and only
+# needs a var for a custom domain.
 name: release-android
 on:
   push:
@@ -19,6 +20,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -30,15 +32,22 @@ jobs:
           flutter-version: 3.47.6
       - name: Source manifest audit
         run: bash tools/ci/manifest_audit.sh
+      - name: Resolve origins
+        id: origins
+        run: |
+          test -n "${{ vars.API_ORIGIN }}" || (echo "missing repo var API_ORIGIN (e.g. https://api.example.com); set it in Settings > Secrets and variables > Actions > Variables" && exit 1)
+          STATIC="${{ vars.STATIC_ORIGIN }}"
+          if [ -z "$STATIC" ]; then STATIC="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"; fi
+          echo "api=${{ vars.API_ORIGIN }}" >> "$GITHUB_OUTPUT"
+          echo "static=$STATIC" >> "$GITHUB_OUTPUT"
+          echo "API=${{ vars.API_ORIGIN }} STATIC=$STATIC"
       - name: Build release AAB
         working-directory: app
         run: >
-          test -n "${{ vars.API_ORIGIN }}" || (echo "missing vars.API_ORIGIN" && exit 1);
-          test -n "${{ vars.STATIC_ORIGIN }}" || (echo "missing vars.STATIC_ORIGIN" && exit 1);
           flutter build appbundle --release --obfuscate
           --split-debug-info=build/debug-info
-          --dart-define=API_BASE_URL=${{ vars.API_ORIGIN }}
-          --dart-define=STATIC_BASE_URL=${{ vars.STATIC_ORIGIN }}/data
+          --dart-define=API_BASE_URL=${{ steps.origins.outputs.api }}
+          --dart-define=STATIC_BASE_URL=${{ steps.origins.outputs.static }}/data
       - name: Merged manifest audit
         working-directory: app
         run: |
@@ -62,6 +71,6 @@ jobs:
       - name: Attach AAB to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          gh release upload "${{ github.ref_name }}"
-          app/build/app/outputs/bundle/release/*.aab --clobber
+        run: |
+          gh release view "${{ github.ref_name }}" || gh release create "${{ github.ref_name }}" --generate-notes
+          gh release upload "${{ github.ref_name }}" app/build/app/outputs/bundle/release/*.aab --clobber
