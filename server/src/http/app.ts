@@ -4,6 +4,8 @@
 import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
 import type { EngineConfig } from "../domain/types.ts";
+import { loadRuntimeConfig } from "../config/runtime.ts";
+import type { RuntimeConfig } from "../config/runtime.ts";
 import { recordHealthCheck, recordRequest } from "../observability/metrics.ts";
 import { clientIp } from "../security/clientIp.ts";
 import type { LineResolver } from "../data/lines.ts";
@@ -24,6 +26,11 @@ export interface AppOptions {
   onVehicle: (lineId: number) => void;
   /** Tunables owned by main.ts; test easy-publish mutates this object. */
   engine: EngineConfig;
+  /**
+   * Live runtime config. Production passes a cached getter refreshed
+   * every 30 s; when omitted, each request loads it (tests, local).
+   */
+  runtime?: () => Promise<RuntimeConfig>;
 }
 
 type Vars = {
@@ -96,18 +103,26 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
   });
 
   if (opts.sql) {
-    app.route("/", buildAccountRoutes(opts.sql));
+    const sql: Sql = opts.sql;
+    // Without an injected getter, load per request (old behavior).
+    const runtime = opts.runtime ??
+      (() => loadRuntimeConfig(sql));
+    app.route("/", buildAccountRoutes({ sql, runtime }));
   }
   if (opts.sql && opts.store) {
+    const sql: Sql = opts.sql;
+    const runtime = opts.runtime ??
+      (() => loadRuntimeConfig(sql));
     app.route(
       "/",
       buildTripRoutes({
-        sql: opts.sql,
+        sql,
         store: opts.store,
         lines: opts.lines,
         followerJitterS: opts.followerJitterS,
         onVehicle: opts.onVehicle,
         engine: opts.engine,
+        runtime,
       }),
     );
   }

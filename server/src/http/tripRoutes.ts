@@ -6,7 +6,7 @@ import * as v from "@valibot/valibot";
 import type { Sql } from "../db/client.ts";
 import { isBlocked } from "../db/blocked.ts";
 import { latestConsentVersion } from "../db/consents.ts";
-import { loadRuntimeConfig } from "../config/runtime.ts";
+import type { RuntimeConfig } from "../config/runtime.ts";
 import type { LineResolver } from "../data/lines.ts";
 import { applyPing, endTrip, isGone, startTrip } from "../domain/ping.ts";
 import type { Store } from "../state/store.ts";
@@ -37,6 +37,8 @@ export interface TripDeps {
   onVehicle: (lineId: number) => void;
   /** Tunables owned by main.ts; test easy-publish mutates this object. */
   engine: EngineConfig;
+  /** Live runtime config, cached in main.ts and refreshed every 30 s. */
+  runtime: () => Promise<RuntimeConfig>;
 }
 
 type Body = { kind: "json"; value: unknown } | { kind: "media" } | {
@@ -77,16 +79,21 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
 
   /** Shared preconditions. Returns a response when the call must stop. */
   async function guard(c: Ctx, deviceId: string): Promise<Response | null> {
-    const rt = await loadRuntimeConfig(deps.sql);
+    // Runtime config is cached (refreshed every 30 s), never re-read
+    // per request. Kill-switch and consent bumps apply within ~30 s.
+    const rt = await deps.runtime();
     if (!rt.serviceEnabled) {
       c.header("Retry-After", "30");
       return c.json({ e: "maint" }, 503);
     }
-    if (await isBlocked(deps.sql, deviceId)) {
+    const [blocked, consent] = await Promise.all([
+      isBlocked(deps.sql, deviceId),
+      latestConsentVersion(deps.sql, deviceId),
+    ]);
+    if (blocked) {
       recordHttp403();
       return c.json({ e: "blocked" }, 403);
     }
-    const consent = await latestConsentVersion(deps.sql, deviceId);
     if (consent !== rt.consentVersion) {
       recordHttp403();
       return c.json({ e: "consent" }, 403);

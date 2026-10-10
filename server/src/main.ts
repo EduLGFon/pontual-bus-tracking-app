@@ -1,6 +1,7 @@
 // Bootstrap: config, HTTP server, internal metrics listener, shutdown.
 // See PLAN.md 6.2, 6.9, 6.10.
 import { loadConfig } from "./config/config.ts";
+import { defaultRuntimeConfig, loadRuntimeConfig } from "./config/runtime.ts";
 import { loadLinesFromDir, registryResolver } from "./data/lines.ts";
 import { openDb } from "./db/client.ts";
 import { defaultEngineConfig } from "./domain/types.ts";
@@ -36,6 +37,16 @@ const config = loadConfig(readEnv());
 setLogLevel(config.logLevel);
 
 const sql = openDb(config.databaseUrl);
+// Runtime config: compiled defaults until the database answers, then
+// the 30 s refresh job below keeps it fresh. Reads never block on it,
+// so the API still boots and serves snapshots with the DB down.
+let runtime = defaultRuntimeConfig();
+loadRuntimeConfig(sql).then(
+  (r) => {
+    runtime = r;
+  },
+  () => {},
+);
 // Line registry: built bundle first, LINES_JSON local seed as fallback.
 const bundled = await loadLinesFromDir(config.dataDir);
 const seed = config.linesJson.map((l) => ({
@@ -113,6 +124,7 @@ const app = buildApp({
   allowedOrigins: config.allowedOrigins,
   onVehicle: broadcastLine,
   engine,
+  runtime: () => Promise.resolve(runtime),
 });
 
 const controller = new AbortController();
@@ -161,7 +173,9 @@ const jobs = startJobs({
   onTick: (changedLines) => {
     for (const lineId of changedLines) broadcastLine(lineId);
   },
-  onConfig: () => {},
+  onConfig: (cfg) => {
+    runtime = cfg;
+  },
 });
 
 // Application heartbeat every 25 s for Cloudflare idle timeouts.
