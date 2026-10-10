@@ -47,11 +47,14 @@ class _MapTabState extends ConsumerState<MapTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(vehicleRepoProvider(widget.line.id)).start(widget.line.id);
-      }
-    });
+    // Timetable-only lines never open the stream.
+    if (widget.line.pilot) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(vehicleRepoProvider(widget.line.id)).start(widget.line.id);
+        }
+      });
+    }
     _refresh = Timer.periodic(const Duration(seconds: 2), (_) {
       if (mounted) {
         setState(() {});
@@ -61,6 +64,9 @@ class _MapTabState extends ConsumerState<MapTab> {
 
   @override
   void dispose() {
+    // The provider is auto-dispose, but stopping here ends the socket
+    // and timers at once instead of waiting for disposal.
+    unawaited(ref.read(vehicleRepoProvider(widget.line.id)).stop());
     _refresh?.cancel();
     _map.dispose();
     super.dispose();

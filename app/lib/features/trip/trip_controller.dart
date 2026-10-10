@@ -447,6 +447,7 @@ class TripController extends ChangeNotifier {
 
   void _runLoop(String token, Stream<TripFix> stream, int firstIntervalS) {
     _activeToken = token;
+    _tripGen++;
     _nextPingAtMs = _deps.clock.nowMs() + firstIntervalS * 1000;
     _ping = PingClient(
       send: (Map<String, dynamic> fix) async {
@@ -490,7 +491,15 @@ class TripController extends ChangeNotifier {
       if (_deps.clock.nowMs() < _nextPingAtMs) {
         return;
       }
-      _ping?.queue(_fixBody(fix), (PingOutcome o) => _onOutcome(token, o));
+      final int gen = _tripGen;
+      _ping?.queue(
+        _fixBody(fix),
+        (PingOutcome o) {
+          if (gen == _tripGen) {
+            _onOutcome(token, o);
+          }
+        },
+      );
     });
     _autoEndTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       unawaited(_checkAutoEnd(token));
@@ -707,6 +716,7 @@ class TripController extends ChangeNotifier {
     _autoEndTimer?.cancel();
     _autoEndTimer = null;
     _activeToken = null;
+    _tripGen++;
     _webHidden = false;
     _supervisor?.reset();
     _supervisor = null;
@@ -736,11 +746,17 @@ class TripController extends ChangeNotifier {
   /// after the trip screen is gone are ignored instead of notifying.
   bool _disposed = false;
 
+  /// Trip generation: bumped on every loop start and every local stop
+  /// so a late outcome from a previous trip can never end the next one
+  /// (the pump outlives _stopLocal across backoff delays).
+  int _tripGen = 0;
+
   @override
   void dispose() {
     _disposed = true;
-    _autoEndTimer?.cancel();
-    unawaited(_fixSub?.cancel());
+    // Full teardown: dispose must also stop the location stream and
+    // foreground service, not just the fix subscription.
+    unawaited(_stopLocal());
     super.dispose();
   }
 }

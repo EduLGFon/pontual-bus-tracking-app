@@ -402,6 +402,94 @@ void main() {
     await positions.close();
   });
 
+  test('late outcome from a previous trip is ignored', () async {
+    final Completer<http.Response> hanging = Completer<http.Response>();
+    String? token;
+    final FakeClock clock = FakeClock(100000);
+    // ignore: close_sinks - closed at the end of the test.
+    final StreamController<Position> positions =
+        StreamController<Position>.broadcast();
+    final MockClient client = MockClient((http.Request req) async {
+      final String path = req.url.path;
+      if (path == '/v1/devices') {
+        return http.Response('{"token":"bm1_t","exp":1,"id":"d"}', 201);
+      }
+      if (path == '/v1/consents') {
+        return http.Response('{"ok":true}', 200);
+      }
+      if (path == '/v1/trip') {
+        if (req.method == 'DELETE') {
+          return http.Response('', 204);
+        }
+        return http.Response('{"r":"W","n":0}', 201);
+      }
+      if (path == '/v1/trip/ping') {
+        return hanging.future;
+      }
+      return http.Response('{}', 404);
+    });
+    final TripController c = TripController(
+      TripDeps(
+        api: BusApi(
+          client: client,
+          baseUrl: () => 'http://127.0.0.1:8080',
+          readToken: () async => token,
+          writeToken: (String t) async => token = t,
+        ),
+        gateway: FakeGateway(),
+        consentStore: const ConsentStore(),
+        consentVersion: 1,
+        locations: () => LocationService(
+          positionStream: (_) => positions.stream,
+          batteryLevel: () async => 80,
+          charging: () async => false,
+          nowMs: () => clock.nowMs(),
+        ),
+        clock: clock,
+      ),
+    );
+    Future<bool> begin() async {
+      bool? started;
+      unawaited(
+        c
+            .startTrip(
+              lineId: 7,
+              lineLabel: '7',
+              showConsent: () async => true,
+              showPermissions: () async {},
+            )
+            .then((bool v) => started = v),
+      );
+      for (int i = 0; i < 100 && started == null; i++) {
+        positions.add(pos(-18.72, -39.85));
+        await Future<void>.microtask(() {});
+      }
+      expect(started, isTrue);
+      return true;
+    }
+
+    await begin();
+    // First trip sends one ping and stalls in flight (n:0 slots every
+    // fix immediately, so no clock advance is needed).
+    positions.add(pos(-18.72, -39.85));
+    for (int i = 0; i < 20; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    await c.endTrip();
+    expect(c.state, isA<TripIdle>());
+    // Second trip on the same controller, then the stale first-trip
+    // outcome (even an abuse end) must not touch it.
+    await begin();
+    hanging.complete(http.Response('{"r":"W","n":20,"e":"abuse"}', 200));
+    for (int i = 0; i < 20; i++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(c.state, isA<TripActive>());
+    expect(c.endKind, isNull);
+    c.dispose();
+    await positions.close();
+  });
+
   testWidgets('end cards carry each reason', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
