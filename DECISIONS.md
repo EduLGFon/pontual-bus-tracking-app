@@ -818,7 +818,7 @@ request history; the entries below supersede it where decided.
   easy-test phones set 500 in `env/phone.json`). Default behavior
   unchanged on both ends. PLAN.md 17.1 updated. Server trip suite
   green including a coarse-fix (350 m) easy-publish regression test.
-- 2026-10-10: ADR: added `permission_handler` 13.0.2 for the Android
+- 2026-10-10: ADR: added `permission_handler` 12.0.3 for the Android
   13+ notification runtime permission (PLAN 8.2 exception clause,
   explicit owner order). Reason: the app declared POST_NOTIFICATIONS
   but never requested it at runtime, so the trip foreground-service
@@ -827,9 +827,17 @@ request history; the entries below supersede it where decided.
   notifications` (much heavier, only viable if local notifications
   are shown), Firebase messaging (forbidden telemetry-adjacent
   infra), hand-rolled MethodChannel (duplicates tested edge-case
-  handling). Size impact: measured below. Maintainer: baseflow.com
+  handling). Version note: 13.0.2 was tried first but its Android
+  artifact requires compileSdk 37 while Flutter 3.47 pins 36
+  (verified build failure on checkDebugAarMetadata); 12.0.3
+  (android artifact compileSdk 35) fits the toolchain.
+  Size impact: debug fat-APK proxy +2.9 MB (+1.7%, 174.9 to
+  177.8 MB unoptimized); release AAB/APK unmeasurable on this
+  machine (assembleRelease fails identically with and without the
+  package: RAM-starved R8, pre-existing environmental issue, retry
+  on a quiet machine or CI). Maintainer: baseflow.com
   (verified publisher, same family as `geolocator`), MIT licence,
-  160/160 pub points, updated Sep 2026, Flutter 3.47 toolchain.
+  updated 2026, Flutter 3.47 toolchain.
   Manifest: injects zero permissions (verified); no new permission
   added. Use is notification-only and best-effort: one request per
   share attempt before the location education sheet, never blocks
