@@ -70,8 +70,15 @@ Widget shareButton(StaticLine line) {
             return Consumer(
               builder: (BuildContext context, WidgetRef ref, _) {
                 return FilledButton(
-                  onPressed: () =>
-                      shareTrip(context, ref, line, gateway: gateway),
+                  // Tests never touch platform channels: notifications are
+                  // a no-op here (the real request has its own unit test).
+                  onPressed: () => shareTrip(
+                    context,
+                    ref,
+                    line,
+                    gateway: gateway,
+                    ensureNotifications: () async {},
+                  ),
                   child: const Text('share'),
                 );
               },

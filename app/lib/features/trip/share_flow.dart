@@ -29,18 +29,21 @@ import 'package:pontual/platform/android/permission_gateway.dart';
 /// then a phased progress sheet for the network and GPS steps, and
 /// navigates to /trip on success. Declines stay silent; failures keep
 /// the progress sheet open with the reason and a retry action.
-/// [gateway] is injectable for tests; production uses geolocator.
+/// [gateway] and [ensureNotifications] are injectable for tests:
+/// production uses geolocator and the notification permission request,
+/// tests pass fakes so no platform channel is ever touched.
 Future<void> shareTrip(
   BuildContext context,
   WidgetRef ref,
   StaticLine line, {
   PermissionGateway gateway = const GeolocatorPermissionGateway(),
+  Future<void> Function() ensureNotifications = ensureNotificationPermission,
 }) async {
   if (!line.pilot) {
     return;
   }
   try {
-    await _shareTrip(context, ref, line, gateway);
+    await _shareTrip(context, ref, line, gateway, ensureNotifications);
   } catch (_) {
     // Any unexpected failure (for example the flags fetch throwing
     // before the progress sheet opens) ends here with an explanation,
@@ -58,6 +61,7 @@ Future<void> _shareTrip(
   WidgetRef ref,
   StaticLine line,
   PermissionGateway gateway,
+  Future<void> Function() ensureNotifications,
 ) async {
   if (!await gateway.servicesOn()) {
     if (!context.mounted) {
@@ -120,7 +124,15 @@ Future<void> _shareTrip(
             if (context.mounted) {
               Navigator.of(context).pop();
             }
-            unawaited(shareTrip(context, ref, line, gateway: gateway));
+            unawaited(
+              shareTrip(
+                context,
+                ref,
+                line,
+                gateway: gateway,
+                ensureNotifications: ensureNotifications,
+              ),
+            );
           },
           onClose: () {
             if (context.mounted) {
@@ -146,7 +158,7 @@ Future<void> _shareTrip(
         return;
       }
       // Best effort and non-blocking: the trip works without the banner.
-      await ensureNotificationPermission();
+      await ensureNotifications();
       if (!context.mounted) {
         return;
       }
