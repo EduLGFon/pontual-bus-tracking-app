@@ -233,6 +233,10 @@ Deno.test("AC18: secure headers and CORS behavior", async () => {
       preflight.headers.get("access-control-allow-methods"),
       "GET, POST, DELETE, OPTIONS",
     );
+    assert(
+      (preflight.headers.get("access-control-allow-headers") ?? "")
+        .includes("if-none-match"),
+    );
 
     const preflightDenied = await hono.request("/v1/devices", {
       method: "OPTIONS",

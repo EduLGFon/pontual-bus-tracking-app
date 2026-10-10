@@ -59,6 +59,12 @@ export class Hub {
     return conn;
   }
 
+  /** True when a new connection from ip fits the caps. No state change. */
+  fits(ip: string): boolean {
+    if (this.conns.size >= this.opts.maxConnections) return false;
+    return (this.perIp.get(ip) ?? 0) + 1 <= this.opts.maxPerIp;
+  }
+
   disconnect(conn: Conn): void {
     if (!this.conns.delete(conn)) return;
     const n = (this.perIp.get(conn.ip) ?? 1) - 1;
@@ -115,7 +121,9 @@ export class Hub {
 
   /** Push a line snapshot to subscribers, skipping pressured sockets. */
   broadcast(lineId: number, payload: string): void {
-    for (const conn of [...this.conns]) {
+    // Direct iteration is safe: disconnect only removes the current
+    // connection, which Set iteration tolerates.
+    for (const conn of this.conns) {
       if (conn.lineId !== lineId) continue;
       if (conn.socket.readyState !== OPEN) {
         this.disconnect(conn);
@@ -139,11 +147,19 @@ export class Hub {
   clients ignore unknown keys. Protocol ping/pong runs via idleTimeout. */
   heartbeat(nowS: number): void {
     const payload = JSON.stringify({ hb: nowS });
-    for (const conn of [...this.conns]) {
+    for (const conn of this.conns) {
       if (conn.socket.readyState !== OPEN) {
         this.disconnect(conn);
         continue;
       }
+      // Same backpressure guards as broadcast: a wedged socket must be
+      // reaped, not fed forever.
+      if (conn.socket.bufferedAmount > 1024 * 1024) {
+        conn.socket.close(1013, "backpressure");
+        this.disconnect(conn);
+        continue;
+      }
+      if (conn.socket.bufferedAmount > 256 * 1024) continue;
       try {
         conn.socket.send(payload);
       } catch {
@@ -154,7 +170,7 @@ export class Hub {
 
   /** Graceful shutdown: tell clients to reconnect with backoff. */
   closeAll(): void {
-    for (const conn of [...this.conns]) {
+    for (const conn of this.conns) {
       try {
         conn.socket.send(JSON.stringify({ bye: "restart" }));
         conn.socket.close(1012, "restart");

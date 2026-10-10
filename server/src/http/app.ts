@@ -4,6 +4,9 @@
 import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
 import type { EngineConfig } from "../domain/types.ts";
+import { Log } from "../observability/log.ts";
+import { loadRuntimeConfig } from "../config/runtime.ts";
+import type { RuntimeConfig } from "../config/runtime.ts";
 import { recordHealthCheck, recordRequest } from "../observability/metrics.ts";
 import { clientIp } from "../security/clientIp.ts";
 import type { LineResolver } from "../data/lines.ts";
@@ -24,6 +27,11 @@ export interface AppOptions {
   onVehicle: (lineId: number) => void;
   /** Tunables owned by main.ts; test easy-publish mutates this object. */
   engine: EngineConfig;
+  /**
+   * Live runtime config. Production passes a cached getter refreshed
+   * every 30 s; when omitted, each request loads it (tests, local).
+   */
+  runtime?: () => Promise<RuntimeConfig>;
 }
 
 type Vars = {
@@ -59,17 +67,15 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
     await next();
     const durationMs = Date.now() - start;
     recordRequest();
-    console.log(
-      JSON.stringify({
-        level: "info",
-        msg: "request",
-        method: c.req.method,
-        route: c.req.routePath,
-        status: c.res.status,
-        durationMs,
-        requestId,
-      }),
-    );
+    // Debug only: at ping frequency this line would dominate CPU and
+    // log volume. Errors still surface via the global error handler.
+    Log.debug("request", {
+      method: c.req.method,
+      route: c.req.routePath,
+      status: c.res.status,
+      durationMs,
+      requestId,
+    });
   });
 
   app.options("*", (c) => {
@@ -83,7 +89,7 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
       c.header("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
       c.header(
         "access-control-allow-headers",
-        "authorization, content-type",
+        "authorization, content-type, if-none-match",
       );
       c.header("access-control-max-age", "86400");
     }
@@ -96,18 +102,26 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
   });
 
   if (opts.sql) {
-    app.route("/", buildAccountRoutes(opts.sql));
+    const sql: Sql = opts.sql;
+    // Without an injected getter, load per request (old behavior).
+    const runtime = opts.runtime ??
+      (() => loadRuntimeConfig(sql));
+    app.route("/", buildAccountRoutes({ sql, runtime }));
   }
   if (opts.sql && opts.store) {
+    const sql: Sql = opts.sql;
+    const runtime = opts.runtime ??
+      (() => loadRuntimeConfig(sql));
     app.route(
       "/",
       buildTripRoutes({
-        sql: opts.sql,
+        sql,
         store: opts.store,
         lines: opts.lines,
         followerJitterS: opts.followerJitterS,
         onVehicle: opts.onVehicle,
         engine: opts.engine,
+        runtime,
       }),
     );
   }

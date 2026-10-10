@@ -178,11 +178,10 @@ String wsBaseUrlOf(String api) {
   return '$scheme://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
 }
 
-/// Vehicle stream per line. Leaving the screen stops the stream.
-final vehicleRepoProvider = Provider.family<VehicleRepository, int>((
-  Ref ref,
-  int lineId,
-) {
+/// Vehicle stream per line. Leaving the screen stops the stream and
+/// frees the repository.
+final vehicleRepoProvider =
+    Provider.autoDispose.family<VehicleRepository, int>((Ref ref, int lineId) {
   final BusApi api = ref.watch(busApiProvider);
   final VehicleRepository repo = VehicleRepository(
     fetchSnapshot: (int id) async {

@@ -9,7 +9,9 @@ http.Client createHttpClient() {
   return IOClient(
     HttpClient()
       ..connectionTimeout = const Duration(seconds: 10)
-      ..idleTimeout = const Duration(seconds: 30)
+      // Longer than the 90 s follower interval so follower pings reuse
+      // the TLS session instead of handshaking every time (D09 budget).
+      ..idleTimeout = const Duration(seconds: 120)
       ..maxConnectionsPerHost = 4,
   );
 }

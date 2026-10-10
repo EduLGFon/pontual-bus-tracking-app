@@ -37,6 +37,23 @@ class BusApi {
 
   String? _cachedToken;
 
+  /// Last ETag per line for conditional snapshot reads.
+  final Map<int, String> _vehiclesEtags = <int, String>{};
+
+  /// Last snapshot body per line, served on 304.
+  final Map<int, VehiclesSnapshot> _vehiclesCache = <int, VehiclesSnapshot>{};
+
+  /// Case-insensitive response header lookup. Servers may send ETag
+  /// capitalized while mocks and CDNs vary.
+  static String? _header(Map<String, String> headers, String name) {
+    for (final MapEntry<String, String> e in headers.entries) {
+      if (e.key.toLowerCase() == name) {
+        return e.value;
+      }
+    }
+    return null;
+  }
+
   /// Returns the device token, registering once per install when needed.
   /// Callers outside trip sharing never invoke this.
   Future<Result<String>> ensureRegistered() async {
@@ -161,26 +178,49 @@ class BusApi {
         : Err<bool>((res as Err<void>).failure);
   }
 
-  /// Fetches the public vehicle snapshot for [lineId].
+  /// Fetches the public vehicle snapshot for [lineId]. Uses a
+  /// conditional GET once an ETag is known; 304 answers serve the
+  /// cached snapshot without re-downloading it.
   Future<Result<VehiclesSnapshot>> getVehicles(int lineId) async {
     try {
+      final Map<String, String> headers = <String, String>{};
+      final String? etag = _vehiclesEtags[lineId];
+      if (etag != null) {
+        headers['if-none-match'] = etag;
+      }
       final http.Response res = await client
-          .get(Uri.parse('${baseUrl()}/v1/lines/$lineId/vehicles'))
+          .get(
+            Uri.parse('${baseUrl()}/v1/lines/$lineId/vehicles'),
+            headers: headers,
+          )
           .timeout(requestTimeout);
+      if (res.statusCode == 304) {
+        final VehiclesSnapshot? cached = _vehiclesCache[lineId];
+        if (cached != null) {
+          return Ok<VehiclesSnapshot>(cached);
+        }
+        return const Err<VehiclesSnapshot>(
+          NetworkFailure('vehicles not cached'),
+        );
+      }
       if (res.statusCode != 200) {
         return Err<VehiclesSnapshot>(_failure(res));
       }
       final Map<String, dynamic> body =
           jsonDecode(res.body) as Map<String, dynamic>;
       final List<dynamic> rows = body['v'] as List<dynamic>;
-      return Ok<VehiclesSnapshot>(
-        VehiclesSnapshot(
-          epochS: body['t'] as int,
-          vehicles: rows
-              .map((dynamic r) => (r as List<dynamic>).cast<num?>())
-              .toList(),
-        ),
+      final VehiclesSnapshot snap = VehiclesSnapshot(
+        epochS: body['t'] as int,
+        vehicles: rows
+            .map((dynamic r) => (r as List<dynamic>).cast<num?>())
+            .toList(),
       );
+      final String? newEtag = _header(res.headers, 'etag');
+      if (newEtag != null) {
+        _vehiclesEtags[lineId] = newEtag;
+        _vehiclesCache[lineId] = snap;
+      }
+      return Ok<VehiclesSnapshot>(snap);
     } on TimeoutException {
       return const Err<VehiclesSnapshot>(NetworkFailure('vehicles timed out'));
     } on http.ClientException catch (e) {

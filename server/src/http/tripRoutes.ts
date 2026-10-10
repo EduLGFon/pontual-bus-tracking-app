@@ -6,12 +6,13 @@ import * as v from "@valibot/valibot";
 import type { Sql } from "../db/client.ts";
 import { isBlocked } from "../db/blocked.ts";
 import { latestConsentVersion } from "../db/consents.ts";
-import { loadRuntimeConfig } from "../config/runtime.ts";
+import type { RuntimeConfig } from "../config/runtime.ts";
 import type { LineResolver } from "../data/lines.ts";
 import { applyPing, endTrip, isGone, startTrip } from "../domain/ping.ts";
 import type { Store } from "../state/store.ts";
 import { authMiddleware } from "../security/auth.ts";
 import { RateLimiter } from "../security/rateLimit.ts";
+import { recordHttp403, recordHttp429 } from "../observability/metrics.ts";
 import { TripPingBody, TripStartBody } from "./tripSchemas.ts";
 import type { EngineConfig, EngineEvent } from "../domain/types.ts";
 
@@ -36,6 +37,8 @@ export interface TripDeps {
   onVehicle: (lineId: number) => void;
   /** Tunables owned by main.ts; test easy-publish mutates this object. */
   engine: EngineConfig;
+  /** Live runtime config, cached in main.ts and refreshed every 30 s. */
+  runtime: () => Promise<RuntimeConfig>;
 }
 
 type Body = { kind: "json"; value: unknown } | { kind: "media" } | {
@@ -61,8 +64,8 @@ async function readBody(c: {
 }
 
 function jitterS(maxS: number): number {
-  const b = crypto.getRandomValues(new Uint8Array(1))[0] / 255;
-  return Math.round((b * 2 - 1) * maxS);
+  // Non-crypto randomness is plenty for schedule jitter.
+  return Math.round((Math.random() * 2 - 1) * maxS);
 }
 
 export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
@@ -76,16 +79,23 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
 
   /** Shared preconditions. Returns a response when the call must stop. */
   async function guard(c: Ctx, deviceId: string): Promise<Response | null> {
-    const rt = await loadRuntimeConfig(deps.sql);
+    // Runtime config is cached (refreshed every 30 s), never re-read
+    // per request. Kill-switch and consent bumps apply within ~30 s.
+    const rt = await deps.runtime();
     if (!rt.serviceEnabled) {
       c.header("Retry-After", "30");
       return c.json({ e: "maint" }, 503);
     }
-    if (await isBlocked(deps.sql, deviceId)) {
+    const [blocked, consent] = await Promise.all([
+      isBlocked(deps.sql, deviceId),
+      latestConsentVersion(deps.sql, deviceId),
+    ]);
+    if (blocked) {
+      recordHttp403();
       return c.json({ e: "blocked" }, 403);
     }
-    const consent = await latestConsentVersion(deps.sql, deviceId);
     if (consent !== rt.consentVersion) {
+      recordHttp403();
       return c.json({ e: "consent" }, 403);
     }
     return null;
@@ -110,6 +120,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
     const limiter = resume ? resumesPerDevice : startsPerDevice;
     if (!limiter.hit(deviceId, Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "quota" }, 429);
     }
     const events: EngineEvent[] = [];
@@ -150,6 +161,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
     const deviceId = c.get("deviceId");
     if (!pingsPerDevice.hit(deviceId, Date.now())) {
       c.header("Retry-After", "60");
+      recordHttp429();
       return c.json({ e: "rate" }, 429);
     }
     const body = await readBody(c);

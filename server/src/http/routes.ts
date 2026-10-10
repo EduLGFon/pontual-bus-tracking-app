@@ -6,7 +6,7 @@ import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
 import { deleteDevice, insertDevice } from "../db/devices.ts";
 import { recordConsent } from "../db/consents.ts";
-import { loadRuntimeConfig } from "../config/runtime.ts";
+import type { RuntimeConfig } from "../config/runtime.ts";
 import { ConsentsBody, DevicesBody, parseJson } from "./schemas.ts";
 import { authMiddleware, evictTokenHash } from "../security/auth.ts";
 import { bearerToken, generateToken, tokenHash } from "../security/token.ts";
@@ -42,7 +42,12 @@ async function readBody(c: Context<Vars>): Promise<Body> {
   }
 }
 
-export function buildAccountRoutes(sql: Sql): Hono<Vars> {
+export function buildAccountRoutes(deps: {
+  sql: Sql;
+  runtime: () => Promise<RuntimeConfig>;
+}): Hono<Vars> {
+  const sql = deps.sql;
+  const runtime = deps.runtime;
   const app = new Hono<Vars>();
   const registerPerIp = new RateLimiter(60, 3600 * 1000);
   const registerGlobal = new RateLimiter(600, 3600 * 1000);
@@ -88,8 +93,7 @@ export function buildAccountRoutes(sql: Sql): Hono<Vars> {
     }
     const parsed = parseJson(ConsentsBody, body.value);
     if (parsed === null) return c.json({ e: "bad_request" }, 400);
-    const cfg = await loadRuntimeConfig(sql);
-    if (parsed.version !== cfg.consentVersion) {
+    if (parsed.version !== (await runtime()).consentVersion) {
       return c.json({ e: "consent" }, 403);
     }
     await recordConsent(sql, deviceId, parsed.version);

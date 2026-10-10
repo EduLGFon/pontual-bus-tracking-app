@@ -1006,3 +1006,44 @@ request history; the entries below supersede it where decided.
   consistent with client-side drops, but the cause needs browser
   console evidence (close codes + times) correlated with the API log.
   Next step is a console-logged repro from the phones.
+- 2026-10-10: Connection review (two-reader pass, every P0 verified
+  in code). Cause of the wifi drops found client-side, not in infra:
+  (1) `vehicleRepoProvider` is a plain Provider.family, and MapTab
+  never stops its repo, so every visited line leaks a socket plus 5 s
+  watchdog plus 15 s poller plus reconnect timer; the Horarios tab
+  keeps the Mapa stream alive, and even timetable-only lines opened
+  sockets. Leaked repos multiply snapshot GETs into the per-IP read
+  buckets and WS reconnects. (2) TripController.dispose never stopped
+  the location stream, leaking GPS after leaving mid-trip. (3) A stale
+  PingClient outcome could end the next trip (no generation guard).
+  (4) Heartbeats were parsed and discarded, so quiet lines resynced
+  pointlessly and the poller armed instantly instead of after 30 s.
+  Fixed in `6ca3892` (liveness, delayed polling, guarded resync) and
+  `e26d56f` (auto-dispose, dispose-stop, pilot-only streams, outcome
+  generation) plus tests; CI verifies (no Flutter on this host).
+  Server hardening in `f3734c8` (prune rate buckets), `589599e`
+  (heartbeat backpressure, 503 capacity instead of a stillborn 101),
+  `4e81e6d` (drop counters, CORS if-none-match), `2e19a1d` (guarded
+  snapshot builds); full suite 74 green here, prod restarted with the
+  tunnel URL kept. Deliberately deferred: per-IP read-limit raise
+  (fine at alpha scale; revisit for campus NAT), ping-bucket reorder
+  (paced clients have 7x headroom), WS close-tolerance (pinned by
+  AC06), remoteAddr IP source (edge overwrites the header in
+  practice).
+- 2026-10-10: Optimization review (three tracks). Server hot path
+  fixed: `guard()` went from 3 sequential PG queries per ping to a
+  cached config (30 s refresh already existed, result was discarded)
+  plus parallel blocked/consent checks (`6ba6b7e`); per-request stdout
+  logs are debug-only (`f577d40`); line snapshots memoized for 304s
+  (`93c6c50`); structured rows with no parse round-trips (`7e6f4c9`);
+  direct hub iteration, Math.random jitter, capped auth cache,
+  batched purge (`376f36c`). Full suite 74 green, prod restarted.
+  Client (needs CI, no Flutter here): follower TLS idle 120 s,
+  battery TTL, auto-end poll 30 s, map ticker 5 s, snapshot ETag with
+  case-insensitive lookup, static-bundle eviction, home live refresh,
+  plus back-button trip end and dispose/start guards (`46cc598`).
+  Deferred with rationale: distanceFilter (would starve still
+  detection and the server timeout), repo ChangeNotifier (correct
+  fix for map rebuilds, but touches provider override patterns in
+  tests), per-IP limit raise, ping-bucket reorder, home error UI and
+  schedule virtualization (cosmetic at current sizes).

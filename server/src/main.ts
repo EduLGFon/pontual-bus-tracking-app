@@ -1,6 +1,7 @@
 // Bootstrap: config, HTTP server, internal metrics listener, shutdown.
 // See PLAN.md 6.2, 6.9, 6.10.
 import { loadConfig } from "./config/config.ts";
+import { defaultRuntimeConfig, loadRuntimeConfig } from "./config/runtime.ts";
 import { loadLinesFromDir, registryResolver } from "./data/lines.ts";
 import { openDb } from "./db/client.ts";
 import { defaultEngineConfig } from "./domain/types.ts";
@@ -8,8 +9,9 @@ import { buildApp } from "./http/app.ts";
 import { startJobs } from "./jobs/jobs.ts";
 import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
+import { pruneLimiters } from "./security/rateLimit.ts";
 import { createStore } from "./state/store.ts";
-import { lineSnapshot } from "./state/snapshots.ts";
+import { snapshotRows } from "./state/snapshots.ts";
 import { Hub } from "./ws/hub.ts";
 
 function readEnv(): Record<string, string | undefined> {
@@ -35,6 +37,16 @@ const config = loadConfig(readEnv());
 setLogLevel(config.logLevel);
 
 const sql = openDb(config.databaseUrl);
+// Runtime config: compiled defaults until the database answers, then
+// the 30 s refresh job below keeps it fresh. Reads never block on it,
+// so the API still boots and serves snapshots with the DB down.
+let runtime = defaultRuntimeConfig();
+loadRuntimeConfig(sql).then(
+  (r) => {
+    runtime = r;
+  },
+  () => {},
+);
 // Line registry: built bundle first, LINES_JSON local seed as fallback.
 const bundled = await loadLinesFromDir(config.dataDir);
 const seed = config.linesJson.map((l) => ({
@@ -83,15 +95,22 @@ if (config.testEasyPublish) {
 
 function broadcastLine(lineId: number): void {
   const nowMs = Date.now();
-  const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
-  hub.broadcast(
-    lineId,
-    JSON.stringify({
+  let payload: string;
+  try {
+    payload = JSON.stringify({
       l: lineId,
       t: Math.floor(nowMs / 1000),
-      v: JSON.parse(body).v,
-    }),
-  );
+      v: snapshotRows(store, lineId, nowMs, engine.publishTtlS),
+    });
+  } catch {
+    // Engine output is practically always valid JSON; if it ever is
+    // not, skip this line instead of aborting the whole tick fan-out.
+    console.log(
+      JSON.stringify({ level: "error", msg: "bad snapshot", lineId }),
+    );
+    return;
+  }
+  hub.broadcast(lineId, payload);
 }
 
 const app = buildApp({
@@ -104,6 +123,7 @@ const app = buildApp({
   allowedOrigins: config.allowedOrigins,
   onVehicle: broadcastLine,
   engine,
+  runtime: () => Promise.resolve(runtime),
 });
 
 const controller = new AbortController();
@@ -152,12 +172,17 @@ const jobs = startJobs({
   onTick: (changedLines) => {
     for (const lineId of changedLines) broadcastLine(lineId);
   },
-  onConfig: () => {},
+  onConfig: (cfg) => {
+    runtime = cfg;
+  },
 });
 
 // Application heartbeat every 25 s for Cloudflare idle timeouts.
+// Also prunes rate-limiter buckets so device/IP entries do not grow
+// forever (each entry is tiny, but uptime is measured in weeks).
 const heartbeat = setInterval(() => {
   hub.heartbeat(Math.floor(Date.now() / 1000));
+  pruneLimiters(Date.now());
 }, 25 * 1000);
 
 Deno.addSignalListener("SIGTERM", shutdown);

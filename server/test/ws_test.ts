@@ -35,6 +35,20 @@ Deno.test("AC06: caps refuse over global and per-IP limits", () => {
   assertEquals(hub.connect(fakeSocket(), "3.3.3.3"), null);
 });
 
+Deno.test("AC06: fits predicts refusal without state change", () => {
+  const hub = new Hub({
+    maxConnections: 1,
+    maxPerIp: 1,
+    maxMsgPerMin: 10,
+    maxMsgBytes: 128,
+  });
+  assert(hub.fits("1.1.1.1"));
+  assert(hub.connect(fakeSocket(), "1.1.1.1"));
+  assert(!hub.fits("1.1.1.1"));
+  assert(!hub.fits("2.2.2.2"));
+  assertEquals(hub.size, 1);
+});
+
 Deno.test("AC06: sub and unsub manage subscription", () => {
   const hub = new Hub();
   const sock = fakeSocket();

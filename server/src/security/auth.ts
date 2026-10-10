@@ -14,6 +14,9 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 1000;
+// Upper bound: entries are tiny, but uptime is measured in weeks and
+// every registered device ever adds one until evicted on delete.
+const CACHE_MAX = 5000;
 
 /** Evict a token hash from the cache (revocation path). */
 export function evictTokenHash(hashHex: string): void {
@@ -45,6 +48,10 @@ export function authMiddleware(sql: Sql) {
       return c.json({ e: "auth" }, 401);
     }
     cache.set(key, { deviceId: row.id, expiresAtMs: now + CACHE_TTL_MS });
+    if (cache.size > CACHE_MAX) {
+      const oldest = cache.keys().next();
+      if (!oldest.done) cache.delete(oldest.value);
+    }
     c.set("deviceId", row.id);
     await next();
   };

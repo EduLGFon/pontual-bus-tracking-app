@@ -1,8 +1,24 @@
 // Public snapshot payloads. Vehicles only, never trips or device data.
 // Coordinates at 5 decimals, member count capped at 3. See PLAN.md 6.6.
 import { buildSnapshot } from "../domain/snapshot.ts";
+import type { SnapshotRow } from "../domain/snapshot.ts";
 import { membersOf, vehiclesOfLine } from "../state/store.ts";
 import type { Store } from "../state/store.ts";
+
+/** Structured vehicle rows for one line, without stringifying. */
+export function snapshotRows(
+  store: Store,
+  lineId: number,
+  nowMs: number,
+  publishTtlS: number,
+): SnapshotRow[] {
+  const vehicles = vehiclesOfLine(store, lineId);
+  const members = new Map();
+  for (const v of vehicles) {
+    members.set(v.id, membersOf(store, v.id, nowMs, 300));
+  }
+  return buildSnapshot(vehicles, members, lineId, nowMs, publishTtlS).v;
+}
 
 /** Snapshot body for one line plus its ETag. */
 export function lineSnapshot(
@@ -11,12 +27,10 @@ export function lineSnapshot(
   nowMs: number,
   publishTtlS: number,
 ): { body: string; etag: string } {
-  const vehicles = vehiclesOfLine(store, lineId);
-  const members = new Map();
-  for (const v of vehicles) {
-    members.set(v.id, membersOf(store, v.id, nowMs, 300));
-  }
-  const snap = buildSnapshot(vehicles, members, lineId, nowMs, publishTtlS);
+  const snap = {
+    t: Math.floor(nowMs / 1000),
+    v: snapshotRows(store, lineId, nowMs, publishTtlS),
+  };
   const body = JSON.stringify(snap);
   return { body, etag: etagOf(body) };
 }
@@ -29,8 +43,7 @@ export function livePayload(
 ): { body: string } {
   const rows: [number, number][] = [];
   for (const [lineId] of store.byLine) {
-    const snap = lineSnapshot(store, lineId, nowMs, publishTtlS);
-    const count = (JSON.parse(snap.body) as { v: unknown[] }).v.length;
+    const count = snapshotRows(store, lineId, nowMs, publishTtlS).length;
     if (count > 0) rows.push([lineId, count]);
   }
   rows.sort((a, b) => a[0] - b[0]);

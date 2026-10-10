@@ -43,7 +43,18 @@ export async function purgeExpiredDevices(
   sql: Sql,
   now: Date,
 ): Promise<number> {
-  const rows =
-    await sql`delete from devices where expires_at <= ${now} returning id`;
-  return rows.length;
+  // Batched so one daily purge never holds a huge write transaction
+  // open as the device table grows.
+  let total = 0;
+  for (;;) {
+    const rows = await sql`
+      delete from devices
+      where id in (
+        select id from devices where expires_at <= ${now} limit 1000
+      )
+      returning id
+    `;
+    total += rows.length;
+    if (rows.length < 1000) return total;
+  }
 }

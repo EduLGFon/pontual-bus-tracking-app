@@ -75,6 +75,28 @@ void main() {
     expect(prefs.getString('static_manifest'), remoteManifest);
   });
 
+  test('swap evicts superseded bundles', () async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('static_lines_b1', bundleLines);
+    final StaticDataRepository r = repo(
+      MockClient((http.Request req) async {
+        if (req.url.path.endsWith('manifest.json')) {
+          return http.Response(
+            remoteManifest,
+            200,
+            headers: <String, String>{'ETag': 'e2'},
+          );
+        }
+        return http.Response(remoteLines, 200);
+      }),
+    );
+    nowMs = checkInterval.inMilliseconds + 1;
+    expect(((await r.refresh()) as Ok<bool>).value, isTrue);
+    expect((await r.lines()).first.name, 'Seven v2');
+    expect(prefs.getString('static_lines_b1'), isNull);
+    expect(prefs.getString('static_lines_b2'), remoteLines);
+  });
+
   test('corrupt remote keeps old data', () async {
     final StaticDataRepository r = repo(
       MockClient((_) async {
