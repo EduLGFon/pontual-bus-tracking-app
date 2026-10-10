@@ -644,7 +644,7 @@ class TripController extends ChangeNotifier {
   }
 
   /// RF16: the user confirms they are still on the bus. Hides the prompt
-  /// and restarts the slow-speed clock for another 4 minutes.
+  /// and restarts the slow-speed clock for another 15 minutes.
   void confirmStillRiding() {
     _supervisor?.confirmStillRiding();
     notifyListeners();

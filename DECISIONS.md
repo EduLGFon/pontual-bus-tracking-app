@@ -856,3 +856,22 @@ request history; the entries below supersede it where decided.
   test proving an injected easy engine promotes a stationary trip on
   the first ping and shows it on /v1/live. Full server suite:
   69 green; fmt, lint, check clean.
+- 2026-10-10: Removed the server 10-minute idle end (owner order: buses
+  legitimately stand still in traffic and construction). applyPing no
+  longer tracks an anchor and never emits `idle`; the Trip type and
+  EngineConfig lose `anchor`, `idle_displacement_m`, `idle_end_after_s`
+  (code-only keys, no migration). The `idle` end code stays recognized
+  by clients but is no longer emitted. Remaining guards: movement
+  gates still decide publishing (a stationary forgotten phone never
+  becomes a vehicle in prod), client walking-prompt timeout ends
+  unanswered stationary trips in ~7 min, server no-ping timeout
+  10 min, hard cap 4 h. Test 14 is now a survival regression
+  (stationary pings for 16 min, trip alive, no end). PLAN.md RF04,
+  PRV03, 6.3 table, 6.6 order, outcomes, 15.2 lifecycle, T09 updated.
+  Full server suite: 69 green; fmt, lint, check clean.
+- 2026-10-10: Walking prompt windows lengthened (owner choice): slow
+  window 4 to 15 min, unanswered-prompt timeout 3 to 5 min. A bus in a
+  jam or construction stop now survives 20 min unattended; forgotten
+  stationary trips still end. Tests use the constants symbolically and
+  pass unchanged. PLAN.md RF16, 6.6, S08, 15.2 updated. Full app suite:
+  155 green, 1 skipped; analyze clean.

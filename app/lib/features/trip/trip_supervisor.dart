@@ -164,7 +164,7 @@ class TripSupervisor {
   }
 
   /// RF16: the user is still on the bus. Hides the prompt and restarts
-  /// the slow-speed clock for another 4 minutes.
+  /// the slow-speed clock for another 15 minutes.
   void confirmStillRiding() {
     _walkingPromptAtMs = null;
     _slowSinceMs = null;

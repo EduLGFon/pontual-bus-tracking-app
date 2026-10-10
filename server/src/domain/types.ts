@@ -35,7 +35,6 @@ export interface Trip {
   stillTicks: number;
   coherenceFail: number;
   strikes: number;
-  anchor: { lat: number; lng: number; atMs: number } | null;
   ledS: number;
   offRoute: boolean;
 }
@@ -78,8 +77,6 @@ export interface EngineConfig {
   publishTtlS: number;
   reelectEveryS: number;
   leaderMinBattery: number;
-  idleDisplacementM: number;
-  idleEndAfterS: number;
   tripTimeoutS: number;
   tripMaxS: number;
   minPingIntervalS: number;
@@ -111,8 +108,6 @@ export function defaultEngineConfig(): EngineConfig {
     publishTtlS: 120,
     reelectEveryS: 300,
     leaderMinBattery: 15,
-    idleDisplacementM: 50,
-    idleEndAfterS: 600,
     tripTimeoutS: 600,
     tripMaxS: 14400,
     minPingIntervalS: 4,

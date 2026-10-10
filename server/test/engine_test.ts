@@ -442,13 +442,13 @@ Deno.test("13: re-election throttled to 300 s", () => {
   assertEquals(v.nextLeaderDeviceId, "b");
 });
 
-// 14. Idle 10 min ends the trip and drops the fix.
-Deno.test("14: idle ends the trip", () => {
+// 14. No idle end: a stationary trip (traffic jam, construction) survives.
+Deno.test("14: stationary trip survives without an idle end", () => {
   const store = createStore();
   const events: EngineEvent[] = [];
   startTrip(store, events, "a", LINE, fix({ seq: 0, speedMps: 0 }), 0, cfg);
   let end: string | undefined;
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 16; i++) {
     const r = applyPing(
       store,
       events,
@@ -461,8 +461,8 @@ Deno.test("14: idle ends the trip", () => {
     );
     if (!isGone(r) && r.end) end = r.end;
   }
-  assertEquals(end, "idle");
-  assert(!store.trips.has("a"));
+  assertEquals(end, undefined);
+  assert(store.trips.has("a"));
 });
 
 // 15. Ping timeout ends the trip.

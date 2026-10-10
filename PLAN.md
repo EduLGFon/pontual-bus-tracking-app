@@ -306,7 +306,7 @@ Status tags: **[A]** alpha-must, **[A\*]** alpha-should, **[L]** later.
 | RF01 | User picks the line they are riding from the list of urban lines.                                                                                                                                                                          | A   | Lines without `pilot` flag show timetable only.                                                  |
 | RF02 | Starting a **trip session** happens when the user taps "Estou no ônibus" and confirms.                                                                                                                                                     | A   | Requires consent (§13) + permissions.                                                            |
 | RF03 | User can end the trip manually ("Desci").                                                                                                                                                                                                  | A   | Also from the Android notification (tap opens trip screen; action button if plugin supports it). |
-| RF04 | Trip ends automatically: idle (<50 m net movement for 10 min), no ping for 10 min, hard cap 4 h, permission revoked, app swiped away.                                                                                                      | A   | Server enforces; client also ends early where it can.                                            |
+| RF04 | Trip ends automatically: no ping for 10 min, hard cap 4 h, permission revoked, app swiped away. Stationary trips are never ended for standing still (traffic jams, construction stops); the movement gates only decide publishing, not survival. | A   | Server enforces; client also ends early where it can.                                            |
 | RF05 | App sends periodic fixes: lat, lng, speed, heading, accuracy, battery (5 % steps), charging flag.                                                                                                                                          | A   | **No client timestamp** (D08).                                                                   |
 | RF06 | Backend attaches trips of the same line that are close and coherent to one **vehicle**.                                                                                                                                                    | A   | Attach-at-ping (D04).                                                                            |
 | RF07 | Backend elects a leader per vehicle: prefers charging, then highest battery (≥ 15 % unless alone), tie → least time led.                                                                                                                   | A   |                                                                                                  |
@@ -318,7 +318,7 @@ Status tags: **[A]** alpha-must, **[A\*]** alpha-should, **[L]** later.
 | RF13 | No persistent identity tied to location: anonymous device token; no trip history; location only in memory and erased at trip end.                                                                                                          | A   | See section 13.                                                                                  |
 | RF14 | **Consent** screen (prominent disclosure) before the first trip and whenever the consent version changes; consent version recorded server-side.                                                                                            | A   | New.                                                                                             |
 | RF15 | **Delete my data**: ends the active trip, deletes the server-side device record (cascades consents), discards the local token and clears local storage.                                                                                    | A   | New (LGPD art. 18).                                                                              |
-| RF16 | "Você ainda está no ônibus?" prompt when the device appears to be walking (slow-speed pattern) or after long idle; no answer in 3 min → trip ends.                                                                                         | A\* | New.                                                                                             |
+| RF16 | "Você ainda está no ônibus?" prompt when the device is slow for 15 min; no answer in 5 min → trip ends. Forgotten stationary trips still die; traffic jams and construction stops survive unattended. | A\* | New. |
 | RF17 | **Kill switch / maintenance / forced update**: static `config.json` (CDN) and server flag; app shows a blocking or banner state.                                                                                                           | A   | New (ops safety).                                                                                |
 | RF18 | Live-lines indicator on the home list (which lines have vehicles now).                                                                                                                                                                     | A   | One cheap, edge-cacheable endpoint `GET /v1/live`.                                               |
 | RF19 | Route polyline drawn on the line map (from pilot-line traces).                                                                                                                                                                             | A\* | Encoded polyline, lazy loaded.                                                                   |
@@ -377,7 +377,7 @@ silently relax.
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | PRV01 | Collect only: pseudonymous device id (and the hash of its token), consent version and time, and, **in process memory only**, the latest fix of an active trip (line, lat, lng, speed, heading, accuracy), battery bucket and charging flag.                                                |
 | PRV02 | Never collect: name, e-mail, phone, contacts, device identifiers (IMEI/Android ID/advertising ID), installed apps, photos, microphone. Do not store IP addresses ourselves (in-memory rate-limit buckets only).                                                                            |
-| PRV03 | Location never reaches disk or the database. It is dropped from memory when the trip ends (user, idle, timeout <= 10 min, max duration, abuse); vehicles are hidden after 120 s without a fix and removed when no member is alive; device records are deleted after 30 days of inactivity. |
+| PRV03 | Location never reaches disk or the database. It is dropped from memory when the trip ends (user, timeout <= 10 min, max duration, abuse); vehicles are hidden after 120 s without a fix and removed when no member is alive; device records are deleted after 30 days of inactivity. |
 | PRV04 | Other users only see **vehicles**, never trips, battery or device ids.                                                                                                                                                                                                                     |
 | PRV05 | In-app privacy policy and terms (pt-BR), "delete my data", consent version tracking, a contact channel for data-subject requests.                                                                                                                                                          |
 | PRV06 | No third-party SDKs that collect data (no Firebase/Crashlytics/Ads/Analytics).                                                                                                                                                                                                             |
@@ -589,7 +589,6 @@ in; the DB only overrides.
 | `publish_ttl_s`                                                  | `120`                                                                   | vehicle hidden if no fix for this long                            |
 | `reelect_every_s`                                                | `300`                                                                   |                                                                   |
 | `leader_min_battery`                                             | `15`                                                                    | unless alone                                                      |
-| `idle_displacement_m` / `idle_end_after_s`                       | `50` / `600`                                                            |                                                                   |
 | `trip_timeout_s` / `trip_max_s`                                  | `600` / `14400`                                                         |                                                                   |
 | `tick_period_s`                                                  | `5`                                                                     |                                                                   |
 | `device_ttl_days`                                                | `30`                                                                    | sliding token expiry and purge                                    |
@@ -687,8 +686,9 @@ object-id attacks and keeps ids out of proxy logs).
 | 429       | `rate` / `quota`      | rate limit / start quota (with `Retry-After`)                                                        |
 | 503       | `capacity` / `maint`  | global cap reached / kill switch (with `Retry-After`)                                                |
 
-`ping` outcomes that end the trip are **HTTP 200** with `"e"`: `idle`,
-`timeout`, `abuse` (the trip no longer exists afterwards).
+`ping` outcomes that end the trip are **HTTP 200** with `"e"`: `timeout`,
+`abuse` (the trip no longer exists afterwards). The `idle` code is
+recognized by clients but no longer emitted.
 
 ### 6.6 Domain engine (pure TypeScript)
 
@@ -714,7 +714,6 @@ interface Trip { // one per device, keyed by deviceId; never serialised, never l
   stillTicks: number;
   coherenceFail: number;
   strikes: number;
-  anchor: { lat: number; lng: number; atMs: number } | null;
   ledS: number;
   offRoute: boolean;
 }
@@ -775,10 +774,7 @@ trip of the device (erasing its fix), creates a trip with role `W`, returns
 7. **Store** the fix on the trip: `seq`, `lastSeenAt = now`, battery, charging;
    update `movingTicks` (moving if `spd >= moving_speed_mps`) and `stillTicks`
    (still if `spd < 0.5`).
-8. **Idle:** no anchor, or distance(anchor, fix) `> idle_displacement_m` ->
-   reset the anchor; else if `now - anchor.at > idle_end_after_s` -> end the
-   trip (`idle`).
-9. **Attach:**
+8. **Attach:**
    - Not attached: find the **nearest** vehicle of the same line whose
      _predicted_ position (dead-reckoned from its last fix by
      `age = now - fixAt`, capped at 60 s) is within
@@ -794,9 +790,9 @@ trip of the device (erasing its fix), creates a trip with role `W`, returns
      -> detach (becomes Waiting; may re-attach or create on the next fix). A
      detached slow trip (walking) never creates a vehicle because it needs
      `movingTicks`.
-10. **Update vehicle** if this fix is newer than `fixAt`: position, speed,
+9. **Update vehicle** if this fix is newer than `fixAt`: position, speed,
     heading, `fixAt = now`, `updatedAt = now`, emit `VehicleUpdated`.
-11. **Role and interval** (what the client must do next):
+10. **Role and interval** (what the client must do next):
     - Waiting -> `{"r":"W","n":waiting_interval_s}`.
     - `vehicle.leaderDeviceId === me` -> `L`; interval
       `leader_interval_moving_s`, or `leader_interval_still_s` if
@@ -807,8 +803,8 @@ trip of the device (erasing its fix), creates a trip with role `W`, returns
     - else `F`; interval `follower_interval_s +/- random(follower_jitter_s)`.
     - A vehicle with **no** leader (new, or leader gone): the first attached
       trip becomes leader immediately.
-12. Optionally set `"a":1` when the slow-speed (walking) pattern persists for >=
-    4 min (RF16). `fix.role` is only an acknowledgement for hand-over; the
+11. Optionally set `"a":1` when the slow-speed (walking) pattern persists for >=
+    15 min (RF16). `fix.role` is only an acknowledgement for hand-over; the
     engine never grants anything because of it.
 
 **`endTrip(deviceId, reason)`**: remove the trip (its fix is gone with it),
@@ -1594,7 +1590,7 @@ Rules:
 - Web variant adds the banner "Mantenha esta tela aberta e o celular
   desbloqueado." and a "Baixe o brilho" tip; shows wake-lock status.
 - Prompt dialog (RF16): "Você ainda está no ônibus?" [Sim, continuar] [Desci];
-  no answer in 3 min → end trip.
+  shown after 15 min slow; no answer in 5 min → end trip.
 - States: _waiting for movement_ ("Aguardando o ônibus sair…"), _leader_,
   _follower_, _offline saver_ ("Sem conexão. Vamos retomar assim que voltar."),
   _paused_ (permission/GPS banner with action).
@@ -2323,7 +2319,8 @@ Engine (pure unit tests, fake clock):
   unless alone; (10) tie goes to the lowest `ledS`; (11) dead leader (> 45 s) ->
   next leader chosen; (12) two-phase hand-over: the old leader keeps `L` until
   the new leader pings with `role = "L"`; (13) re-election at most every 300 s.
-- Lifecycle: (14) idle 10 min ends the trip and drops the fix; (15) timeout 10
+- Lifecycle: (14) no idle end: stationary trips survive traffic jams and
+  construction stops (movement gates only decide publishing); (15) timeout 10
   min; (16) max 4 h; (17) `DELETE /v1/trip` idempotent; (18) vehicle removed
   when no members alive; (19) restart: state empty, `gone` then `resume`
   rebuilds.
@@ -2346,7 +2343,7 @@ Engine (pure unit tests, fake clock):
   duplicate-suppression; latest-wins coalescing; server codes
   `gone/idle/timeout/abuse/maint`.
 - `AutoEndPolicy`: GPS off > 5 min, permission revoked, walking prompt timeout
-  (3 min).
+  (5 min after a 15 min slow window).
 - `VehicleRepository`: snapshot → WebSocket → watchdog resync at 45 s → polling
   fallback after 30 s socket-down → stop on background; age maths with a fake
   monotonic clock.
@@ -2431,7 +2428,7 @@ touches money-like risk (data leaks).
 | T06  | `server/` skeleton: `deno.json`, import map, lock, config validation (fail fast), `Log` wrapper, Hono app, `GET /v1/health`, graceful shutdown, internal metrics listener, CI job (`deno fmt/lint/check/test`)                                | server boots with minimal permissions; invalid env refuses to start | S5.5/M |
 | T07  | Migration `0001` (tables, roles/grants), dbmate setup, repositories (devices, consents, blocked, appConfig), `app_config` loader with 30 s refresh, `no_location_at_rest` test                                                                | migrations apply to a clean DB; AC22 passes                         | S5.5/H |
 | T08  | Security middleware: request id, secure headers, body limit, content-type, CORS, IP resolution, in-memory rate limiter, bearer auth with token hash lookup and cache, error handler; `POST /v1/devices`, `POST /v1/consents`, `DELETE /v1/me` | AC01, AC03, AC11, AC13, AC18, AC23 pass                             | O5.5/H |
-| T09  | Pure engine: geo helpers, validation, plausibility, `startTrip`, `applyPing` (attach, coherence, idle, roles, hand-over), `endTrip`, `tick`, snapshot builder, in-memory store, event bus                                                     | engine unit tests 1-18, 20-24 pass                                  | O5.5/H |
+| T09  | Pure engine: geo helpers, validation, plausibility, `startTrip`, `applyPing` (attach, coherence, roles, hand-over), `endTrip`, `tick`, snapshot builder, in-memory store, event bus                                                     | engine unit tests 1-18, 20-24 pass                                  | O5.5/H |
 | T10  | Trip endpoints (`POST /v1/trip`, `/v1/trip/ping`, `DELETE /v1/trip`) wired to the engine; quotas, capacity, resume, kill switch                                                                                                               | AC02, AC07, AC09, AC10, AC14 pass                                   | O5.5/H |
 | T11  | Tick job and background jobs (tick, config refresh, device purge, db health), overlap guard                                                                                                                                                   | test 19 and tick behaviour tests pass                               | S5.5/H |
 | T12  | Read endpoints (`GET /v1/lines/{id}/vehicles` with ETag, `GET /v1/live`), WebSocket hub (subscribe, caps, heartbeat, backpressure, `bye`), edge-cache headers                                                                                 | AC05, AC06, AC08 pass                                               | O5.5/H |

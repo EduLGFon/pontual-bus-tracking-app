@@ -10,7 +10,7 @@ enum AutoEndReason {
   /// Location permission revoked mid-trip.
   permissionRevoked,
 
-  /// Walking prompt unanswered for 3 minutes.
+  /// Walking prompt unanswered for 5 minutes.
   walkingTimeout,
 
   /// Hard 4-hour cap reached client-side.
@@ -21,10 +21,12 @@ enum AutoEndReason {
 const int gpsOffAfterMs = 5 * 60 * 1000;
 
 /// Walking prompt timeout in milliseconds.
-const int walkingTimeoutMs = 3 * 60 * 1000;
+const int walkingTimeoutMs = 5 * 60 * 1000;
 
 /// Slow-speed duration before the RF16 prompt appears in milliseconds.
-const int walkingPromptAfterMs = 4 * 60 * 1000;
+/// Long enough to survive traffic jams and construction stops without
+/// nagging; forgotten stationary trips still end 5 min after the prompt.
+const int walkingPromptAfterMs = 15 * 60 * 1000;
 
 /// Speed below which a fix counts as slow (walking or stopped bus).
 const double walkingSlowMaxMps = 0.5;

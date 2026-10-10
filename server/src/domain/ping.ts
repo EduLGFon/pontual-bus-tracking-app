@@ -114,7 +114,6 @@ export function startTrip(
     stillTicks: 0,
     coherenceFail: 0,
     strikes: 0,
-    anchor: { lat: fix.lat, lng: fix.lng, atMs: nowMs },
     ledS: 0,
     offRoute: false,
   });
@@ -177,18 +176,7 @@ export function applyPing(
   trip.offRoute = false;
   // 7. Store the fix.
   storeFix(trip, fix, nowMs, cfg);
-  // 8. Idle.
-  if (trip.anchor) {
-    if (
-      distM(trip.anchor.lat, trip.anchor.lng, fix.lat, fix.lng) >
-        cfg.idleDisplacementM
-    ) {
-      trip.anchor = { lat: fix.lat, lng: fix.lng, atMs: nowMs };
-    } else if (nowMs - trip.anchor.atMs > cfg.idleEndAfterS * 1000) {
-      return endWith(store, events, trip, "idle", cfg);
-    }
-  }
-  // 9. Attach.
+  // 8. Attach.
   if (trip.vehicleId === null) {
     const found = nearestVehicle(
       vehiclesOfLine(store, trip.lineId),
@@ -244,7 +232,7 @@ export function applyPing(
       trip.coherenceFail = 0;
     }
   }
-  // 10. Update vehicle when newer.
+  // 9. Update vehicle when newer.
   const v = trip.vehicleId !== null
     ? store.vehicles.get(trip.vehicleId)
     : undefined;
@@ -257,7 +245,7 @@ export function applyPing(
     v.updatedAtMs = nowMs;
     events.push({ kind: "vehicleUpdated", lineId: trip.lineId });
   }
-  // 11. Role and interval, with two-phase hand-over.
+  // 10. Role and interval, with two-phase hand-over.
   if (trip.vehicleId === null || !v) {
     return { role: "W", intervalS: cfg.waitingIntervalS };
   }
