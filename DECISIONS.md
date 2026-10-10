@@ -1030,3 +1030,20 @@ request history; the entries below supersede it where decided.
   (paced clients have 7x headroom), WS close-tolerance (pinned by
   AC06), remoteAddr IP source (edge overwrites the header in
   practice).
+- 2026-10-10: Optimization review (three tracks). Server hot path
+  fixed: `guard()` went from 3 sequential PG queries per ping to a
+  cached config (30 s refresh already existed, result was discarded)
+  plus parallel blocked/consent checks (`6ba6b7e`); per-request stdout
+  logs are debug-only (`f577d40`); line snapshots memoized for 304s
+  (`93c6c50`); structured rows with no parse round-trips (`7e6f4c9`);
+  direct hub iteration, Math.random jitter, capped auth cache,
+  batched purge (`376f36c`). Full suite 74 green, prod restarted.
+  Client (needs CI, no Flutter here): follower TLS idle 120 s,
+  battery TTL, auto-end poll 30 s, map ticker 5 s, snapshot ETag with
+  case-insensitive lookup, static-bundle eviction, home live refresh,
+  plus back-button trip end and dispose/start guards (`46cc598`).
+  Deferred with rationale: distanceFilter (would starve still
+  detection and the server timeout), repo ChangeNotifier (correct
+  fix for map rebuilds, but touches provider override patterns in
+  tests), per-IP limit raise, ping-bucket reorder, home error UI and
+  schedule virtualization (cosmetic at current sizes).
