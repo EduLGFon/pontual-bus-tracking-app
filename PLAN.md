@@ -1035,14 +1035,14 @@ budget, no unknown keys, every `source_ids` entry exists.
 | Prefs                    | `shared_preferences`                                                                                                                                                      | tiny key/values (consent version, device token, theme, data version)     |
 | Wake lock (web/iOS)      | `wakelock_plus`                                                                                                                                                           | only on the trip screen, web build                                       |
 | Links                    | `url_launcher`                                                                                                                                                            | open policy URL / mail                                                   |
-| Notifications permission | smallest viable option (VERIFY `geolocator`'s notification config + Android 13 runtime permission; if a plugin is needed use the lightest, with a minimal permission set) |                                                                          |
+| Notifications permission | `permission_handler` (notification permission only, best-effort request at share time; injects no manifest permissions) | approved by ADR 2026-10-10, lightest option per the VERIFY note |
 | Polyline decode          | tiny pure-Dart function (about 25 lines)                                                                                                                                  | no package                                                               |
 | Tests                    | `flutter_test`, `mocktail`                                                                                                                                                |                                                                          |
 
 **Forbidden:** any backend-as-a-service SDK (including `supabase_flutter`),
 Firebase/FCM/Crashlytics/Analytics, Google Maps SDK, ad SDKs, any telemetry SDK,
 local DBs (Drift/Isar/ObjectBox, not needed in alpha), `permission_handler`
-(unless S1 proves it is the only way and its permissions are trimmed),
+(except the notification-only use approved by ADR 2026-10-10),
 `build_runner` code-gen, `freezed`, large icon/font packages (use system font +
 Material icons with tree-shaking).
 
@@ -2535,7 +2535,7 @@ T39. Never cut: consent, delete-my-data, security tests, kill switch, auto-end.
 | local                                                                                                                                                                                                                                                                       | `deno task dev` + Docker PostgreSQL                | `flutter run`    | development, server tests           |
 | staging (optional)                                                                                                                                                                                                                                                          | second instance on the VPS (own port/DB/subdomain) | Pages preview    | simulator, integration, field tests |
 | prod                                                                                                                                                                                                                                                                        | main instance on the VPS                           | Pages production | pilot users                         |
-| Client env via `--dart-define-from-file=env/<env>.json` containing **only** `API_BASE_URL` and `STATIC_BASE_URL` (no secrets exist for clients). Server env lives in a root-owned env file on the host (never in git); `server/.env.example` lists the variable names only. |                                                    |                  |                                     |
+| Client env via `--dart-define-from-file=env/<env>.json` containing `API_BASE_URL` and `STATIC_BASE_URL`, plus the optional `FIX_ACCURACY_MAX_M` test override (default 60; easy-test phones use 500 to match a TEST_EASY_PUBLISH server; no secrets exist for clients). Server env lives in a root-owned env file on the host (never in git); `server/.env.example` lists the variable names only. |                                                    |                  |                                     |
 
 ### 17.2 CI workflows (GitHub Actions; pin actions by SHA; `permissions: contents: read` by default)
 

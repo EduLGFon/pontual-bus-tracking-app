@@ -809,6 +809,34 @@ request history; the entries below supersede it where decided.
   so permission and GPS still run when the consent POST merely raced
   a bad network. No new dependency or permission. Full app suite:
   151 green, 1 skipped; analyze clean.
+- 2026-10-10: Easy-test accuracy gates. Field report: indoor fixes are
+  inside the bbox but coarser than the 60 m hard gate, so sharing
+  stalls at Aguardando GPS forever (`fix dropped accuracy` in the
+  console) even with TEST_EASY_PUBLISH on. The easy flag now also
+  relaxes `accuracyMaxM` to 500 (logged at boot), and the client
+  accepts an optional `FIX_ACCURACY_MAX_M` dart-define (default 60;
+  easy-test phones set 500 in `env/phone.json`). Default behavior
+  unchanged on both ends. PLAN.md 17.1 updated. Server trip suite
+  green including a coarse-fix (350 m) easy-publish regression test.
+- 2026-10-10: ADR: added `permission_handler` 13.0.2 for the Android
+  13+ notification runtime permission (PLAN 8.2 exception clause,
+  explicit owner order). Reason: the app declared POST_NOTIFICATIONS
+  but never requested it at runtime, so the trip foreground-service
+  notification stays hidden on Android 13+ until the user allows it
+  manually in settings. Alternatives rejected: `flutter_local_
+  notifications` (much heavier, only viable if local notifications
+  are shown), Firebase messaging (forbidden telemetry-adjacent
+  infra), hand-rolled MethodChannel (duplicates tested edge-case
+  handling). Size impact: measured below. Maintainer: baseflow.com
+  (verified publisher, same family as `geolocator`), MIT licence,
+  160/160 pub points, updated Sep 2026, Flutter 3.47 toolchain.
+  Manifest: injects zero permissions (verified); no new permission
+  added. Use is notification-only and best-effort: one request per
+  share attempt before the location education sheet, never blocks
+  sharing, never throws; widget tests inject a no-op because
+  platform channels have no native side under testWidgets (verified:
+  even a raw unmocked channel never resolves there). Full app suite:
+  155 green, 1 skipped; analyze clean.
 - 2026-10-10: TEST_EASY_PUBLISH was silently ineffective. main.ts
   mutated one EngineConfig for the tick jobs while tripRoutes built
   its own default, so stationary trips stayed W forever even with the

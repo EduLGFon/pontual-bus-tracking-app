@@ -322,6 +322,7 @@ Deno.test("injected engine reaches the ping path: easy-publish promotes", async 
   const easy = defaultEngineConfig();
   easy.movingSpeedMps = 0;
   easy.movingTicksToPublish = 1;
+  easy.accuracyMaxM = 500;
   const hono = buildApp({
     sql,
     store: createStore(),
