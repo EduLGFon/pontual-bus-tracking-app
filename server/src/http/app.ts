@@ -3,6 +3,7 @@
 // validation, handler, and the global error handler.
 import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
+import type { EngineConfig } from "../domain/types.ts";
 import { recordHealthCheck, recordRequest } from "../observability/metrics.ts";
 import { clientIp } from "../security/clientIp.ts";
 import type { LineResolver } from "../data/lines.ts";
@@ -21,6 +22,8 @@ export interface AppOptions {
   trustCloudflare: boolean;
   allowedOrigins: string[];
   onVehicle: (lineId: number) => void;
+  /** Tunables owned by main.ts; test easy-publish mutates this object. */
+  engine: EngineConfig;
 }
 
 type Vars = {
@@ -104,6 +107,7 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
         lines: opts.lines,
         followerJitterS: opts.followerJitterS,
         onVehicle: opts.onVehicle,
+        engine: opts.engine,
       }),
     );
   }

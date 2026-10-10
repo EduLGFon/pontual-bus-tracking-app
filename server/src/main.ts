@@ -99,6 +99,7 @@ const app = buildApp({
   trustCloudflare: config.trustCloudflare,
   allowedOrigins: config.allowedOrigins,
   onVehicle: broadcastLine,
+  engine,
 });
 
 const controller = new AbortController();

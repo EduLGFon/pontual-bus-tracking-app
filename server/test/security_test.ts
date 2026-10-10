@@ -4,6 +4,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { registryResolver } from "../src/data/lines.ts";
 import { openDb } from "../src/db/client.ts";
+import { defaultEngineConfig } from "../src/domain/types.ts";
 import { buildApp } from "../src/http/app.ts";
 import { createStore } from "../src/state/store.ts";
 import { Hub } from "../src/ws/hub.ts";
@@ -36,6 +37,7 @@ function app() {
     onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: ["http://127.0.0.1:8080"],
+    engine: defaultEngineConfig(),
   });
   return { sql, hono };
 }

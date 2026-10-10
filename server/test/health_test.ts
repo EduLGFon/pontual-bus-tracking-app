@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { registryResolver } from "../src/data/lines.ts";
+import { defaultEngineConfig } from "../src/domain/types.ts";
 import { buildApp } from "../src/http/app.ts";
 import { Hub } from "../src/ws/hub.ts";
 
@@ -13,6 +14,7 @@ function testApp() {
     onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: [],
+    engine: defaultEngineConfig(),
   });
 }
 

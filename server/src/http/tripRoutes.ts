@@ -13,8 +13,7 @@ import type { Store } from "../state/store.ts";
 import { authMiddleware } from "../security/auth.ts";
 import { RateLimiter } from "../security/rateLimit.ts";
 import { TripPingBody, TripStartBody } from "./tripSchemas.ts";
-import { defaultEngineConfig } from "../domain/types.ts";
-import type { EngineEvent } from "../domain/types.ts";
+import type { EngineConfig, EngineEvent } from "../domain/types.ts";
 
 const BODY_CAP = 1024;
 
@@ -35,6 +34,8 @@ export interface TripDeps {
   lines: LineResolver;
   followerJitterS: number;
   onVehicle: (lineId: number) => void;
+  /** Tunables owned by main.ts; test easy-publish mutates this object. */
+  engine: EngineConfig;
 }
 
 type Body = { kind: "json"; value: unknown } | { kind: "media" } | {
@@ -71,7 +72,7 @@ export function buildTripRoutes(deps: TripDeps): Hono<Vars> {
   const resumesPerDevice = new RateLimiter(6, 600 * 1000);
   const pingsPerDevice = new RateLimiter(30, 60 * 1000);
   const endsPerDevice = new RateLimiter(30, 60 * 1000);
-  const cfg = defaultEngineConfig();
+  const cfg = deps.engine;
 
   /** Shared preconditions. Returns a response when the call must stop. */
   async function guard(c: Ctx, deviceId: string): Promise<Response | null> {

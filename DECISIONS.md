@@ -809,3 +809,14 @@ request history; the entries below supersede it where decided.
   so permission and GPS still run when the consent POST merely raced
   a bad network. No new dependency or permission. Full app suite:
   151 green, 1 skipped; analyze clean.
+- 2026-10-10: TEST_EASY_PUBLISH was silently ineffective. main.ts
+  mutated one EngineConfig for the tick jobs while tripRoutes built
+  its own default, so stationary trips stayed W forever even with the
+  flag on (field report: stuck at Aguardando with live []).
+  Threaded the config through instead: AppOptions/TripDeps take a
+  required engine owned by main.ts, which applies the easy-publish
+  mutation before serving. readRoutes keeps its own default (it only
+  reads publishTtlS, untouched by the flag). Added an HTTP regression
+  test proving an injected easy engine promotes a stationary trip on
+  the first ping and shows it on /v1/live. Full server suite:
+  69 green; fmt, lint, check clean.

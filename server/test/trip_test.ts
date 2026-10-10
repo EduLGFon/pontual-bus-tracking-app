@@ -4,6 +4,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { registryResolver } from "../src/data/lines.ts";
 import { openDb } from "../src/db/client.ts";
+import { defaultEngineConfig } from "../src/domain/types.ts";
 import { buildApp } from "../src/http/app.ts";
 import { createStore } from "../src/state/store.ts";
 import { Hub } from "../src/ws/hub.ts";
@@ -34,6 +35,7 @@ function app() {
     onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: [],
+    engine: defaultEngineConfig(),
   });
   return { sql, hono };
 }
@@ -308,5 +310,64 @@ Deno.test("AC14: kill switch stops writes with maint", async () => {
     } finally {
       await sql.end();
     }
+  }
+});
+
+Deno.test("injected engine reaches the ping path: easy-publish promotes", async () => {
+  // Regression: main.ts used to mutate one EngineConfig while the trip
+  // routes built their own default, so TEST_EASY_PUBLISH never took
+  // effect and stationary trips stayed W forever.
+  await truncate();
+  const sql = openDb(testDbUrl());
+  const easy = defaultEngineConfig();
+  easy.movingSpeedMps = 0;
+  easy.movingTicksToPublish = 1;
+  const hono = buildApp({
+    sql,
+    store: createStore(),
+    lines: registryResolver([{ id: 7, isActive: true, route: null }]),
+    hub: new Hub(),
+    followerJitterS: 0,
+    onVehicle: () => {},
+    trustCloudflare: false,
+    allowedOrigins: [],
+    engine: easy,
+  });
+  try {
+    const token = await device(hono);
+    const started = await hono.request("/v1/trip", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: startBody(),
+    });
+    assertEquals(started.status, 201);
+    const ping = await hono.request("/v1/trip/ping", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        seq: 1,
+        lat: -18.72,
+        lng: -39.85,
+        spd: 0,
+        hdg: null,
+        acc: 10,
+        bat: 80,
+        chg: false,
+        role: "W",
+      }),
+    });
+    assertEquals(ping.status, 200);
+    assertEquals(await ping.json(), { r: "L", n: 15 });
+    const live = await hono.request("/v1/live");
+    assertEquals(live.status, 200);
+    assertEquals(await live.json(), [[7, 1]]);
+  } finally {
+    await sql.end();
   }
 });

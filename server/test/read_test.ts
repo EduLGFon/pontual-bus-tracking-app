@@ -49,6 +49,7 @@ function app() {
     onVehicle: () => {},
     trustCloudflare: false,
     allowedOrigins: [],
+    engine: defaultEngineConfig(),
   });
   return { sql, hono, store };
 }
