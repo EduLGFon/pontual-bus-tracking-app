@@ -8,6 +8,7 @@ import { buildApp } from "./http/app.ts";
 import { startJobs } from "./jobs/jobs.ts";
 import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
+import { pruneLimiters } from "./security/rateLimit.ts";
 import { createStore } from "./state/store.ts";
 import { lineSnapshot } from "./state/snapshots.ts";
 import { Hub } from "./ws/hub.ts";
@@ -156,8 +157,11 @@ const jobs = startJobs({
 });
 
 // Application heartbeat every 25 s for Cloudflare idle timeouts.
+// Also prunes rate-limiter buckets so device/IP entries do not grow
+// forever (each entry is tiny, but uptime is measured in weeks).
 const heartbeat = setInterval(() => {
   hub.heartbeat(Math.floor(Date.now() / 1000));
+  pruneLimiters(Date.now());
 }, 25 * 1000);
 
 Deno.addSignalListener("SIGTERM", shutdown);

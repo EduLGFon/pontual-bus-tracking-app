@@ -11,7 +11,9 @@ export interface Bucket {
 export class RateLimiter {
   private buckets = new Map<string, Bucket>();
 
-  constructor(private limit: number, private windowMs: number) {}
+  constructor(private limit: number, private windowMs: number) {
+    trackLimiter(this);
+  }
 
   /** True when the hit is allowed. Advances the window when expired. */
   hit(key: string, nowMs: number): boolean {
@@ -35,4 +37,16 @@ export class RateLimiter {
   size(): number {
     return this.buckets.size;
   }
+}
+
+/** All live limiters, so a periodic job can prune them. */
+const limiters = new Set<RateLimiter>();
+
+function trackLimiter(limiter: RateLimiter): void {
+  limiters.add(limiter);
+}
+
+/** Drop expired buckets everywhere. Cheap; call about every 25 s. */
+export function pruneLimiters(nowMs: number): void {
+  for (const limiter of limiters) limiter.prune(nowMs);
 }
