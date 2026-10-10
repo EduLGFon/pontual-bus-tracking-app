@@ -64,8 +64,8 @@ async function readBody(c: {
 }
 
 function jitterS(maxS: number): number {
-  const b = crypto.getRandomValues(new Uint8Array(1))[0] / 255;
-  return Math.round((b * 2 - 1) * maxS);
+  // Non-crypto randomness is plenty for schedule jitter.
+  return Math.round((Math.random() * 2 - 1) * maxS);
 }
 
 export function buildTripRoutes(deps: TripDeps): Hono<Vars> {

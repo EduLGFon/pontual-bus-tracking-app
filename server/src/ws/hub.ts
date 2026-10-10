@@ -121,7 +121,9 @@ export class Hub {
 
   /** Push a line snapshot to subscribers, skipping pressured sockets. */
   broadcast(lineId: number, payload: string): void {
-    for (const conn of [...this.conns]) {
+    // Direct iteration is safe: disconnect only removes the current
+    // connection, which Set iteration tolerates.
+    for (const conn of this.conns) {
       if (conn.lineId !== lineId) continue;
       if (conn.socket.readyState !== OPEN) {
         this.disconnect(conn);
@@ -145,7 +147,7 @@ export class Hub {
   clients ignore unknown keys. Protocol ping/pong runs via idleTimeout. */
   heartbeat(nowS: number): void {
     const payload = JSON.stringify({ hb: nowS });
-    for (const conn of [...this.conns]) {
+    for (const conn of this.conns) {
       if (conn.socket.readyState !== OPEN) {
         this.disconnect(conn);
         continue;
@@ -168,7 +170,7 @@ export class Hub {
 
   /** Graceful shutdown: tell clients to reconnect with backoff. */
   closeAll(): void {
-    for (const conn of [...this.conns]) {
+    for (const conn of this.conns) {
       try {
         conn.socket.send(JSON.stringify({ bye: "restart" }));
         conn.socket.close(1012, "restart");
