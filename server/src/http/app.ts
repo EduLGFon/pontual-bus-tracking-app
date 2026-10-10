@@ -4,6 +4,7 @@
 import { Hono } from "@hono/hono";
 import type { Sql } from "../db/client.ts";
 import type { EngineConfig } from "../domain/types.ts";
+import { Log } from "../observability/log.ts";
 import { loadRuntimeConfig } from "../config/runtime.ts";
 import type { RuntimeConfig } from "../config/runtime.ts";
 import { recordHealthCheck, recordRequest } from "../observability/metrics.ts";
@@ -66,17 +67,15 @@ export function buildApp(opts: AppOptions): Hono<Vars> {
     await next();
     const durationMs = Date.now() - start;
     recordRequest();
-    console.log(
-      JSON.stringify({
-        level: "info",
-        msg: "request",
-        method: c.req.method,
-        route: c.req.routePath,
-        status: c.res.status,
-        durationMs,
-        requestId,
-      }),
-    );
+    // Debug only: at ping frequency this line would dominate CPU and
+    // log volume. Errors still surface via the global error handler.
+    Log.debug("request", {
+      method: c.req.method,
+      route: c.req.routePath,
+      status: c.res.status,
+      durationMs,
+      requestId,
+    });
   });
 
   app.options("*", (c) => {
