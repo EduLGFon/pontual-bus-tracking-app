@@ -875,3 +875,26 @@ request history; the entries below supersede it where decided.
   stationary trips still end. Tests use the constants symbolically and
   pass unchanged. PLAN.md RF16, 6.6, S08, 15.2 updated. Full app suite:
   155 green, 1 skipped; analyze clean.
+- 2026-10-10: CI repair after data/flutter failures. Root causes: (1)
+  tools/sim/main.ts kept an unused PRNG (`rand`/`mulberry32`) after the
+  battery randomization was replaced with a constant, failing
+  `deno lint` and with it the whole data job. Removed the dead code;
+  the `--seed` CLI flag is still accepted but currently unused.
+  (2) app manifest set `usesCleartextTraffic="true"`, failing the
+  manifest audit and violating PLAN SEC06/T11/AC15 (TLS only, no
+  cleartext). Removed the attribute. Consequence: physical-device
+  testing against a LAN http server is OS-blocked again; use staging
+  https or document another compliant path before re-adding any
+  exception. (3) env/phone.json (machine LAN IP) was committed; it is
+  local-only, now untracked and gitignored (kept on disk). ci.yml
+  hardened: concurrency cancel-in-progress (fewer duplicate runs and
+  emails), per-job timeouts, workflow_dispatch for manual reruns,
+  server smoke uses `deno task start` (same flags as dev minus
+  --env-file, which CI does not have; env comes from the workflow),
+  failing smoke prints the server log tail, data size step echoes the
+  byte count. No secrets in any CI job, triggers unchanged
+  (pull_request plus master), so fork PRs run the same checks.
+  Verified: tools lint/fmt/data-test/data-validate/data-build green,
+  manifest audit PASS, flutter analyze and dart format clean, full app
+  suite green (154 passed, 1 skipped, pre-change tree; post-change tree
+  touches no Dart code). Server smoke still needs CI (no local DB).
