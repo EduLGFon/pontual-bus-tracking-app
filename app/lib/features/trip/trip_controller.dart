@@ -196,6 +196,9 @@ class TripController extends ChangeNotifier {
   SamplingMode get samplingMode => _samplingMode;
 
   void _set(TripState next) {
+    if (_disposed) {
+      return;
+    }
     _state = next;
     notifyListeners();
   }
@@ -248,6 +251,12 @@ class TripController extends ChangeNotifier {
     })?
     onPhase,
   }) async {
+    if (_state is! TripIdle) {
+      // A start is already in flight or active (double-tap, retry
+      // racing the sheet). Fresh attempts start from Idle only.
+      _failReason = StartFailure.busy;
+      return false;
+    }
     _lineId = lineId;
     _lineLabel = lineLabel;
     _endKind = null;
@@ -501,7 +510,10 @@ class TripController extends ChangeNotifier {
         },
       );
     });
-    _autoEndTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Supervision cadence: thresholds are minutes-scale (5 min GPS-off,
+    // 3-poll permission debounce), so 30 s keeps every guarantee while
+    // cutting platform-channel wakeups 3x versus 10 s.
+    _autoEndTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(_checkAutoEnd(token));
     });
   }

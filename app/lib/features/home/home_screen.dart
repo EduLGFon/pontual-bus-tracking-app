@@ -1,5 +1,7 @@
 // S03 Home: line search plus list plus live indicators. Lines paint from
 // cached data first; live dots fill in without spinners. See PLAN.md 9.5.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +23,25 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _query = '';
+  Timer? _liveRefresh;
+
+  @override
+  void initState() {
+    super.initState();
+    // Live dots would freeze after first paint otherwise; 60 s is
+    // plenty for line-level presence.
+    _liveRefresh = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) {
+        ref.invalidate(liveProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _liveRefresh?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

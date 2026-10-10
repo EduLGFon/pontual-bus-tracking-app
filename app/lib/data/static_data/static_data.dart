@@ -20,6 +20,17 @@ const String manifestEtagKey = 'static_manifest_etag';
 /// Storage key for the last remote check timestamp.
 const String lastCheckKey = 'static_last_check_ms';
 
+/// Case-insensitive response header lookup. Servers and CDNs vary
+/// the ETag capitalization.
+String? headerOf(Map<String, String> headers, String name) {
+  for (final MapEntry<String, String> e in headers.entries) {
+    if (e.key.toLowerCase() == name) {
+      return e.value;
+    }
+  }
+  return null;
+}
+
 /// Minimum interval between remote manifest checks.
 const Duration checkInterval = Duration(hours: 24);
 
@@ -168,9 +179,18 @@ class StaticDataRepository {
       // Atomic swap: versioned lines first, manifest pointer last.
       await sp.setString('$linesKeyPrefix$version', linesRes.body);
       await sp.setString(manifestKey, res.body);
-      final String? newEtag = res.headers['etag'];
+      final String? newEtag = headerOf(res.headers, 'etag');
       if (newEtag != null) {
         await sp.setString(manifestEtagKey, newEtag);
+      }
+      // Evict superseded bundles; keep storage flat across versions.
+      // Runs after the pointer swap so a crash can never delete live
+      // data: at worst an orphaned bundle waits for the next refresh.
+      final Set<String> keys = sp.getKeys();
+      for (final String k in keys) {
+        if (k.startsWith(linesKeyPrefix) && k != '$linesKeyPrefix$version') {
+          await sp.remove(k);
+        }
       }
       return const Ok<bool>(true);
     } on FormatException {

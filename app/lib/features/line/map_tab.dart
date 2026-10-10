@@ -55,7 +55,10 @@ class _MapTabState extends ConsumerState<MapTab> {
         }
       });
     }
-    _refresh = Timer.periodic(const Duration(seconds: 2), (_) {
+    // 5 s cadence: "há N s" text and staleness flip need second-scale
+    // freshness, not 2 s; the whole tree rebuild stays cheap at this
+    // rate for a handful of markers.
+    _refresh = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         setState(() {});
       }

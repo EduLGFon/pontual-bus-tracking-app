@@ -185,4 +185,43 @@ void main() {
     service.stop();
     await positions.close();
   });
+
+  test('battery reads are cached within the TTL', () async {
+    // ignore: close_sinks - closed at the end of the test.
+    final StreamController<Position> positions =
+        StreamController<Position>.broadcast();
+    int reads = 0;
+    final LocationService service = LocationService(
+      positionStream: (_) => positions.stream,
+      batteryLevel: () async {
+        reads += 1;
+        return 80;
+      },
+      charging: () async => false,
+      nowMs: () => 100000,
+    );
+    final Stream<TripFix> stream =
+        service.fixes(mode: SamplingMode.waiting, lineLabel: 't');
+    Position atMs(int ms) => Position(
+          latitude: -18.72,
+          longitude: -39.85,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(ms),
+          accuracy: 10,
+          altitude: 0,
+          heading: 90,
+          speed: 0,
+          speedAccuracy: 1,
+          altitudeAccuracy: 1,
+          headingAccuracy: 1,
+        );
+    final Future<List<TripFix>> two = stream.take(2).toList();
+    positions.add(atMs(100000));
+    positions.add(atMs(100000));
+    final List<TripFix> fixes = await two.timeout(const Duration(seconds: 5));
+    expect(fixes.length, 2);
+    expect(reads, 1);
+    expect(fixes[0].batteryPct, 80);
+    service.stop();
+    await positions.close();
+  });
 }

@@ -223,6 +223,11 @@ class LocationService {
   int _lastBatteryPct = 100;
   bool _lastCharging = false;
 
+  /// Battery reads are platform channels; cache them TTL so dropped or
+  /// duplicate fixes do not each pay two Binder calls.
+  static const int batteryCacheTtlMs = 60 * 1000;
+  int? _lastBatteryReadMs;
+
   /// Starts emitting accepted fixes for [mode]. Recreates the stream when
   /// the policy switches modes, at most once per 30 seconds.
   Stream<TripFix> fixes({
@@ -265,18 +270,24 @@ class LocationService {
             _seq += 1;
             int level = _lastBatteryPct;
             bool chg = _lastCharging;
-            try {
-              // Parallel and bounded: a stuck battery read must never
-              // starve location. Failures keep the last known values.
-              final List<Object> parts = await Future.wait<Object>(
-                <Future<Object>>[_batteryLevel(), _charging()],
-              );
-              level = (parts[0] as int).clamp(0, 100);
-              chg = parts[1] as bool;
-              _lastBatteryPct = level;
-              _lastCharging = chg;
-            } catch (_) {
-              Log.w('battery read failed', 'last kept');
+            final int atMs = _nowMs();
+            final int? lastRead = _lastBatteryReadMs;
+            if (lastRead == null || atMs - lastRead >= batteryCacheTtlMs) {
+              // Reserve first: concurrent fixes share one read.
+              _lastBatteryReadMs = atMs;
+              try {
+                // Parallel and bounded: a stuck battery read must never
+                // starve location. Failures keep the last known values.
+                final List<Object> parts = await Future.wait<Object>(
+                  <Future<Object>>[_batteryLevel(), _charging()],
+                );
+                level = (parts[0] as int).clamp(0, 100);
+                chg = parts[1] as bool;
+                _lastBatteryPct = level;
+                _lastCharging = chg;
+              } catch (_) {
+                Log.w('battery read failed', 'last kept');
+              }
             }
             if (!controller.isClosed) {
               controller.add(

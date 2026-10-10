@@ -155,6 +155,26 @@ class _TripScreenState extends State<TripScreen> with WidgetsBindingObserver {
       return EndCard(kind: c.endKind!, detail: c.endDetail);
     }
     final String elapsed = _elapsed(c);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? _) async {
+        // System back must end the server trip too; otherwise it
+        // lingers as a ghost until the server timeout.
+        if (didPop || c.state is! TripActive) {
+          return;
+        }
+        await c.endTrip();
+        if (context.mounted) {
+          context.pop();
+        }
+      },
+      child: _scaffold(c, elapsed),
+    );
+  }
+
+  /// Trip status body. Split out so the back-button guard above does
+  /// not reindent the whole screen.
+  Widget _scaffold(TripController c, String elapsed) {
     return Scaffold(
       appBar: AppBar(title: const Text('Compartilhando viagem')),
       body: ListView(

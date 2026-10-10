@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pontual/core/errors/failures.dart';
 import 'package:pontual/data/api/bus_api.dart';
+import 'package:pontual/data/api/dto.dart';
 import 'package:pontual/data/net/http_client.dart';
 
 void main() {
@@ -56,6 +57,36 @@ void main() {
     );
     final Result<String> result = await api.ensureRegistered();
     expect(result, isA<Err<String>>());
+  });
+
+  test('vehicle snapshots use etag then serve 304 from cache', () async {
+    final List<String?> seenIfNoneMatch = <String?>[];
+    int calls = 0;
+    final MockClient client = MockClient((http.Request req) async {
+      calls += 1;
+      seenIfNoneMatch.add(req.headers['if-none-match']);
+      if (calls == 1) {
+        return http.Response(
+          '{"t":100,"v":[[3,-18.72,-39.85,90,29,1,4]]}',
+          200,
+          headers: <String, String>{'ETag': 'W/"a-1"'},
+        );
+      }
+      return http.Response('', 304);
+    });
+    final BusApi api = BusApi(
+      client: client,
+      baseUrl: () => 'http://127.0.0.1:8080',
+      readToken: () async => null,
+      writeToken: (_) async {},
+    );
+    final Result<VehiclesSnapshot> first = await api.getVehicles(7);
+    final Result<VehiclesSnapshot> second = await api.getVehicles(7);
+    expect(calls, 2);
+    expect(seenIfNoneMatch[0], isNull);
+    expect(seenIfNoneMatch[1], 'W/"a-1"');
+    expect((first as Ok<VehiclesSnapshot>).value.epochS, 100);
+    expect((second as Ok<VehiclesSnapshot>).value.vehicles.length, 1);
   });
 
   test('shared client factory builds without network', () {
