@@ -226,6 +226,46 @@ class StringsPt {
   static const String shareStartFailed =
       'Não foi possível iniciar a viagem. Tente de novo.';
 
+  /// Progress sheet title while starting a trip.
+  static const String shareProgressTitle = 'Iniciando viagem';
+
+  /// Progress phase: device location services check.
+  static const String sharePhaseServices = 'Verificando aparelho';
+
+  /// Progress phase: remote flags fetch.
+  static const String sharePhaseConfig = 'Buscando configuracao';
+
+  /// Progress phase: consent sheet.
+  static const String sharePhaseConsent = 'Consentimento';
+
+  /// Progress phase: system permission.
+  static const String sharePhasePermission = 'Permissao do sistema';
+
+  /// Progress phase: device registration.
+  static const String sharePhaseRegister = 'Registrando aparelho';
+
+  /// Progress phase: first GPS fix wait.
+  static const String sharePhaseGps = 'Aguardando GPS';
+
+  /// Progress phase: trip start request.
+  static const String sharePhaseStart = 'Iniciando viagem';
+
+  /// Progress sheet cancel action.
+  static const String shareProgressCancel = 'Cancelar';
+
+  /// Progress sheet retry action after a failure.
+  static const String shareProgressRetry = 'Tentar de novo';
+
+  /// Progress sheet close action after a failure.
+  static const String shareProgressClose = 'Fechar';
+
+  /// Progress sheet expandable technical details title.
+  static const String shareProgressDetails = 'Detalhes tecnicos';
+
+  /// GPS wait hint shown under the active GPS phase.
+  static const String shareGpsTip =
+      'Vá para um lugar aberto, com vista para o céu.';
+
   /// Consent revocation action.
   static const String privacyRevoke = 'Revogar consentimento';
 

@@ -119,7 +119,9 @@ void main() {
     expect(find.text('Compartilhar sua localização'), findsNothing);
   });
 
-  testWidgets('failed start explains itself', (WidgetTester tester) async {
+  testWidgets('failed start keeps the progress sheet open', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(shareButton(pilotLine));
     await tester.tap(find.text('share'));
     await tester.pumpAndSettle();
@@ -127,17 +129,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Continuar'), findsOneWidget);
     await tester.tap(find.text('Continuar'));
-    // The rig has no usable network or GPS: the flow must end with a
-    // visible explanation, never silence. Pump up to 70 s of fake time
-    // (the first-fix timeout is 60 s) but stop as soon as the message
-    // shows, before its dismiss timer can hide it.
-    for (int i = 0; i < 70; i++) {
-      await tester.pump(const Duration(seconds: 1));
-      if (find.byType(SnackBar).evaluate().isNotEmpty) {
+    // The rig has no usable network or GPS: the flow must end with the
+    // phased progress sheet showing the failure and a retry action,
+    // never silence. Pump fixed rounds (the sheet owns a 1 s ticker,
+    // so pumpAndSettle never settles).
+    for (int i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+      if (find.text('Tentar de novo').evaluate().isNotEmpty) {
         break;
       }
     }
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('Iniciando viagem'), findsWidgets);
+    expect(find.text('Tentar de novo'), findsOneWidget);
+    expect(find.text('Detalhes tecnicos'), findsOneWidget);
   });
 
   testWidgets('/trip with a controller shows the trip', (

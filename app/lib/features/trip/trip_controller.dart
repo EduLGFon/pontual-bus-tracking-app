@@ -14,6 +14,7 @@ import 'package:pontual/data/api/dto.dart';
 import 'package:pontual/data/prefs/consent_store.dart';
 import 'package:pontual/domain/trip/auto_end.dart';
 import 'package:pontual/domain/trip/sampling_policy.dart';
+import 'package:pontual/domain/trip/share_phases.dart';
 import 'package:pontual/domain/trip/trip_state.dart';
 import 'package:pontual/features/trip/consent_flow.dart';
 import 'package:pontual/features/trip/location_service.dart';
@@ -132,6 +133,12 @@ class TripController extends ChangeNotifier {
   StartFailure? get failReason => _failReason;
   StartFailure? _failReason;
 
+  /// Server error code of the last failed start, if any (for example
+  /// quota, maint, area, register). Shown in the progress details only,
+  /// never with coordinates or tokens.
+  String? get lastErrorCode => _lastErrorCode;
+  String? _lastErrorCode;
+
   LocationService? _locations;
   StreamSubscription<TripFix>? _fixSub;
   PingClient? _ping;
@@ -140,6 +147,18 @@ class TripController extends ChangeNotifier {
   TripSupervisor? _supervisor;
   SamplingMode _samplingMode = SamplingMode.waiting;
   bool _checking = false;
+
+  /// True after [cancelStart]. Checked between start steps so the
+  /// progress sheet Cancelar button stops the flow promptly.
+  bool _cancelled = false;
+
+  /// Requests cancellation of an in-flight [startTrip]. Stops local
+  /// resources; the awaiting start observes the closed stream and
+  /// returns false with [StartFailure.declined].
+  void cancelStart() {
+    _cancelled = true;
+    _stopLocal();
+  }
 
   /// True while the web page is hidden (foreground-only sharing).
   /// Fixes are dropped while hidden; the server timeout ends the trip
@@ -194,25 +213,57 @@ class TripController extends ChangeNotifier {
     return StartFailure.failed;
   }
 
+  /// Extracts a short error code for the progress details. Never carries
+  /// coordinates, tokens, or messages with values.
+  String _codeOf(AppFailure failure) {
+    if (failure is NetworkFailure) {
+      return 'offline';
+    }
+    if (failure is ServerFailure) {
+      return failure.code;
+    }
+    return 'failed';
+  }
+
   /// Starts a trip on [lineId]. Returns false when consent is declined.
   /// [firstFixTimeout] bounds the wait for the first accepted GPS fix;
-  /// expiry sets [failReason] to [StartFailure.noGps].
+  /// expiry sets [failReason] to [StartFailure.noGps]. [onPhase] reports
+  /// phase transitions for the progress sheet; it never throws.
   Future<bool> startTrip({
     required int lineId,
     required String lineLabel,
     required Future<bool> Function() showConsent,
     required Future<void> Function() showPermissions,
     Duration firstFixTimeout = const Duration(seconds: 60),
+    void Function(
+      SharePhase phase,
+      SharePhaseStatus status, {
+      String? errorCode,
+    })?
+    onPhase,
   }) async {
     _lineId = lineId;
     _lineLabel = lineLabel;
     _endKind = null;
     _endDetail = null;
     _failReason = null;
+    _lastErrorCode = null;
+    _cancelled = false;
     _supervisor = TripSupervisor(gateway: _deps.gateway);
     _samplingMode = SamplingMode.waiting;
     _set(tripReduce(_state, TripEvent.tapStart));
 
+    void phase(SharePhase phase, SharePhaseStatus status, {String? errorCode}) {
+      try {
+        onPhase?.call(phase, status, errorCode: errorCode);
+      } catch (_) {
+        // Progress reporting never breaks the start flow.
+      }
+    }
+
+    bool aborted() => _cancelled || _disposed;
+
+    phase(SharePhase.consent, SharePhaseStatus.active);
     final ConsentResult consent = await ensureConsent(
       currentVersion: _deps.consentVersion,
       store: _deps.consentStore,
@@ -229,28 +280,83 @@ class TripController extends ChangeNotifier {
         return posted;
       },
     );
-    if (consent == ConsentResult.declined) {
+    if (aborted()) {
+      phase(SharePhase.consent, SharePhaseStatus.failed, errorCode: 'cancel');
       _failReason = StartFailure.declined;
       _set(tripReduce(_state, TripEvent.consentDeclined));
       return false;
     }
+    if (consent == ConsentResult.declined) {
+      phase(SharePhase.consent, SharePhaseStatus.failed, errorCode: 'declined');
+      _failReason = StartFailure.declined;
+      _set(tripReduce(_state, TripEvent.consentDeclined));
+      return false;
+    }
+    // offlinePending continues like granted: local acceptance is stored
+    // and the trip attempt still runs. The server consent guard answers
+    // 403 when the record is truly missing, reported at the start phase.
+    // Failing here would skip permission and GPS for users whose POST
+    // merely raced a bad network.
+    phase(SharePhase.consent, SharePhaseStatus.done);
     _set(tripReduce(_state, TripEvent.consentAccepted));
 
+    phase(SharePhase.permission, SharePhaseStatus.active);
     await showPermissions();
+    if (aborted()) {
+      phase(
+        SharePhase.permission,
+        SharePhaseStatus.failed,
+        errorCode: 'cancel',
+      );
+      _failReason = StartFailure.declined;
+      _set(tripReduce(_state, TripEvent.permissionsDenied));
+      return false;
+    }
     final LocationPermissionState perm = await _deps.gateway.request();
     if (perm != LocationPermissionState.granted) {
+      phase(
+        SharePhase.permission,
+        SharePhaseStatus.failed,
+        errorCode: 'denied',
+      );
       _failReason = StartFailure.permission;
       _set(tripReduce(_state, TripEvent.permissionsDenied));
       return false;
     }
+    phase(SharePhase.permission, SharePhaseStatus.done);
     _set(tripReduce(_state, TripEvent.permissionsGranted));
 
-    final Result<String> reg = await _deps.api.ensureRegistered();
-    if (reg is Err<String>) {
-      _failReason = _classify(reg.failure);
+    phase(SharePhase.register, SharePhaseStatus.active);
+    final Result<String> reg;
+    try {
+      reg = await _deps.api.ensureRegistered();
+    } catch (_) {
+      // The typed client returns Result; anything thrown is unexpected
+      // transport trouble. Report it instead of failing silently.
+      phase(SharePhase.register, SharePhaseStatus.failed, errorCode: 'offline');
+      await _stopLocal();
+      _failReason = StartFailure.offline;
       _set(const TripIdle());
       return false;
     }
+    if (aborted()) {
+      phase(SharePhase.register, SharePhaseStatus.failed, errorCode: 'cancel');
+      await _stopLocal();
+      _failReason = StartFailure.declined;
+      _set(const TripIdle());
+      return false;
+    }
+    if (reg is Err<String>) {
+      final StartFailure reason = _classify(reg.failure);
+      final String code = _codeOf(reg.failure);
+      _lastErrorCode = code;
+      phase(SharePhase.register, SharePhaseStatus.failed, errorCode: code);
+      await _stopLocal();
+      _failReason = reason;
+      _set(const TripIdle());
+      return false;
+    }
+    phase(SharePhase.register, SharePhaseStatus.done);
     final String token = (reg as Ok<String>).value;
     // Wait for the first accepted fix so POST /v1/trip carries real
     // coordinates inside the bbox. Single subscription: the run loop
@@ -260,27 +366,58 @@ class TripController extends ChangeNotifier {
       mode: SamplingMode.waiting,
       lineLabel: _lineLabel,
     );
+    phase(SharePhase.gps, SharePhaseStatus.active);
     TripFix first;
     try {
       first = await stream.first.timeout(firstFixTimeout);
     } on TimeoutException {
+      phase(SharePhase.gps, SharePhaseStatus.failed, errorCode: 'gps-timeout');
       await _stopLocal();
       _failReason = StartFailure.noGps;
       _set(const TripIdle());
       return false;
+    } on StateError {
+      // The stream closed without a fix: Cancelar or dispose.
+      phase(SharePhase.gps, SharePhaseStatus.failed, errorCode: 'cancel');
+      await _stopLocal();
+      _failReason = StartFailure.declined;
+      _set(const TripIdle());
+      return false;
     }
-    final Result<TripInstruction> started = await _deps.api.startTrip(
-      token,
-      lineId: lineId,
-      lat: first.lat,
-      lng: first.lng,
-      accuracyM: first.accuracyM,
-      batteryPct: first.batteryPct,
-      charging: first.charging,
-    );
+    if (aborted()) {
+      phase(SharePhase.gps, SharePhaseStatus.failed, errorCode: 'cancel');
+      await _stopLocal();
+      _failReason = StartFailure.declined;
+      _set(const TripIdle());
+      return false;
+    }
+    phase(SharePhase.gps, SharePhaseStatus.done);
+    phase(SharePhase.start, SharePhaseStatus.active);
+    final Result<TripInstruction> started;
+    try {
+      started = await _deps.api.startTrip(
+        token,
+        lineId: lineId,
+        lat: first.lat,
+        lng: first.lng,
+        accuracyM: first.accuracyM,
+        batteryPct: first.batteryPct,
+        charging: first.charging,
+      );
+    } catch (_) {
+      phase(SharePhase.start, SharePhaseStatus.failed, errorCode: 'offline');
+      await _stopLocal();
+      _failReason = StartFailure.offline;
+      _set(tripReduce(_state, TripEvent.startFailed));
+      _set(const TripIdle());
+      return false;
+    }
     if (started is Err<TripInstruction>) {
       await _stopLocal();
       final AppFailure failure = started.failure;
+      final String code = _codeOf(failure);
+      _lastErrorCode = code;
+      phase(SharePhase.start, SharePhaseStatus.failed, errorCode: code);
       _failReason = _classify(failure);
       if (failure is ServerFailure && failure.code == 'consent') {
         // Server never recorded our consent: forget the confirmation so
@@ -291,6 +428,7 @@ class TripController extends ChangeNotifier {
       _set(const TripIdle());
       return false;
     }
+    phase(SharePhase.start, SharePhaseStatus.done);
     _startedAtMs = _deps.clock.nowMs();
     _supervisor?.begin(_startedAtMs!);
     _set(tripReduce(_state, TripEvent.startConfirmed));

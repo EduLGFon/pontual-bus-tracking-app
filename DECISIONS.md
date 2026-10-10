@@ -795,3 +795,17 @@ request history; the entries below supersede it where decided.
   rejects, and a pt-BR SnackBar for every dead end in share_flow
   (declines stay silent, permission keeps its sheets). Full app suite:
   142 green, 1 skipped.
+- 2026-10-10: Phased share-start progress sheet. Tapping Estou no
+  onibus now opens ShareProgressSheet at the register phase with 7
+  rows (services, config, consent, permission, register, gps, start),
+  a GPS countdown with an open-sky tip, and a collapsed Detalhes
+  tecnicos block carrying phase id, error code, attempt, consent
+  version, line id, and API host only (no coordinates, tokens, or
+  device ids). Failures keep the sheet open with Tentar de novo
+  (fresh attempt) and Fechar; Cancelar aborts via cancelStart and
+  returns declined. TripController.startTrip takes an optional
+  onPhase callback and never throws (unexpected transport errors map
+  to offline). offlinePending still continues like granted per T30,
+  so permission and GPS still run when the consent POST merely raced
+  a bad network. No new dependency or permission. Full app suite:
+  151 green, 1 skipped; analyze clean.
