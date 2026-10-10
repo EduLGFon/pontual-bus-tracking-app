@@ -31,6 +31,10 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
   const cfg = defaultEngineConfig();
   const vehiclesPerIp = new RateLimiter(120, 60 * 1000);
   const livePerIp = new RateLimiter(60, 60 * 1000);
+  // Last snapshot per line. ETag equality proves identical bytes, so a
+  // matching If-None-Match answers 304 without rebuilding. Bounded by
+  // line count (tens of entries, each a few KB at most).
+  const memo = new Map<number, { body: string; etag: string }>();
   const ipOf = (c: { get(n: "clientIp"): string }) => c.get("clientIp");
 
   app.get("/v1/lines/:id/vehicles", (c) => {
@@ -43,13 +47,19 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
     if (!Number.isInteger(id) || id < 1) return c.json({ e: "line" }, 404);
     const line = deps.lines(id);
     if (!line || !line.isActive) return c.json({ e: "line" }, 404);
+    const inm = c.req.header("if-none-match");
+    const cached = memo.get(id);
+    if (cached && inm === cached.etag) {
+      return c.body(null, 304);
+    }
     const { body, etag } = lineSnapshot(
       deps.store,
       id,
       Date.now(),
       cfg.publishTtlS,
     );
-    if (c.req.header("if-none-match") === etag) {
+    memo.set(id, { body, etag });
+    if (inm === etag) {
       return c.body(null, 304);
     }
     c.header("ETag", etag);
