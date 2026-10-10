@@ -105,17 +105,21 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
         (lineId) => {
           const line = deps.lines(lineId);
           if (!line || !line.isActive) return null;
-          const { body } = lineSnapshot(
-            deps.store,
-            lineId,
-            Date.now(),
-            cfg.publishTtlS,
-          );
-          return JSON.stringify({
-            l: lineId,
-            t: Math.floor(Date.now() / 1000),
-            v: JSON.parse(body).v,
-          });
+          try {
+            const { body } = lineSnapshot(
+              deps.store,
+              lineId,
+              Date.now(),
+              cfg.publishTtlS,
+            );
+            return JSON.stringify({
+              l: lineId,
+              t: Math.floor(Date.now() / 1000),
+              v: JSON.parse(body).v,
+            });
+          } catch {
+            return null;
+          }
         },
       );
       if (reply !== null) {

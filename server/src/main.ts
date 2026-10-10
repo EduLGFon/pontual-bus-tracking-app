@@ -85,14 +85,22 @@ if (config.testEasyPublish) {
 function broadcastLine(lineId: number): void {
   const nowMs = Date.now();
   const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
-  hub.broadcast(
-    lineId,
-    JSON.stringify({
+  let payload: string;
+  try {
+    payload = JSON.stringify({
       l: lineId,
       t: Math.floor(nowMs / 1000),
       v: JSON.parse(body).v,
-    }),
-  );
+    });
+  } catch {
+    // Engine output is practically always valid JSON; if it ever is
+    // not, skip this line instead of aborting the whole tick fan-out.
+    console.log(
+      JSON.stringify({ level: "error", msg: "bad snapshot", lineId }),
+    );
+    return;
+  }
+  hub.broadcast(lineId, payload);
 }
 
 const app = buildApp({
