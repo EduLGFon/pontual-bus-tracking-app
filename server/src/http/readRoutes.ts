@@ -9,7 +9,7 @@ import {
   recordWsCapacityRefused,
   recordWsConnect,
 } from "../observability/metrics.ts";
-import { lineSnapshot, livePayload } from "../state/snapshots.ts";
+import { lineSnapshot, livePayload, snapshotRows } from "../state/snapshots.ts";
 import type { Store } from "../state/store.ts";
 import { RateLimiter } from "../security/rateLimit.ts";
 import { Hub } from "../ws/hub.ts";
@@ -116,16 +116,11 @@ export function buildReadRoutes(deps: ReadDeps): Hono<Vars> {
           const line = deps.lines(lineId);
           if (!line || !line.isActive) return null;
           try {
-            const { body } = lineSnapshot(
-              deps.store,
-              lineId,
-              Date.now(),
-              cfg.publishTtlS,
-            );
+            const nowMs = Date.now();
             return JSON.stringify({
               l: lineId,
-              t: Math.floor(Date.now() / 1000),
-              v: JSON.parse(body).v,
+              t: Math.floor(nowMs / 1000),
+              v: snapshotRows(deps.store, lineId, nowMs, cfg.publishTtlS),
             });
           } catch {
             return null;

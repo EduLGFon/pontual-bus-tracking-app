@@ -11,7 +11,7 @@ import { setLogLevel } from "./observability/log.ts";
 import { snapshot } from "./observability/metrics.ts";
 import { pruneLimiters } from "./security/rateLimit.ts";
 import { createStore } from "./state/store.ts";
-import { lineSnapshot } from "./state/snapshots.ts";
+import { snapshotRows } from "./state/snapshots.ts";
 import { Hub } from "./ws/hub.ts";
 
 function readEnv(): Record<string, string | undefined> {
@@ -95,13 +95,12 @@ if (config.testEasyPublish) {
 
 function broadcastLine(lineId: number): void {
   const nowMs = Date.now();
-  const { body } = lineSnapshot(store, lineId, nowMs, engine.publishTtlS);
   let payload: string;
   try {
     payload = JSON.stringify({
       l: lineId,
       t: Math.floor(nowMs / 1000),
-      v: JSON.parse(body).v,
+      v: snapshotRows(store, lineId, nowMs, engine.publishTtlS),
     });
   } catch {
     // Engine output is practically always valid JSON; if it ever is
