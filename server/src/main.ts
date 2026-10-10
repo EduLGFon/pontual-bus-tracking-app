@@ -63,16 +63,20 @@ const hub = new Hub();
 const engine = defaultEngineConfig();
 if (config.testEasyPublish) {
   // Testing only: publish on the first ping and count every fix as
-  // moving, so stationary field tests show a bus. Refused outside local
+  // moving, so stationary field tests show a bus. Indoor fixes are
+  // also coarse, so the accuracy gate is relaxed to match the
+  // easy-test client env (FIX_ACCURACY_MAX_M). Refused outside local
   // by config validation. See DECISIONS.md.
   engine.movingSpeedMps = 0;
   engine.movingTicksToPublish = 1;
+  engine.accuracyMaxM = 500;
   console.log(
     JSON.stringify({
       level: "warn",
       msg: "test easy-publish enabled",
       movingSpeedMps: engine.movingSpeedMps,
       movingTicksToPublish: engine.movingTicksToPublish,
+      accuracyMaxM: engine.accuracyMaxM,
     }),
   );
 }

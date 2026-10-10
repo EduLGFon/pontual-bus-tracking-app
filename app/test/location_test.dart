@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:pontual/domain/trip/sampling_policy.dart';
 import 'package:pontual/features/trip/location_service.dart';
+import 'package:pontual/platform/android/notification_permission.dart';
 import 'package:pontual/platform/android/permission_gateway.dart';
 
 void main() {
@@ -144,6 +145,10 @@ void main() {
 
   test('gateway constructs without platform calls', () {
     expect(const GeolocatorPermissionGateway(), isNotNull);
+  });
+
+  test('notification permission request never throws off-device', () async {
+    await ensureNotificationPermission().timeout(const Duration(seconds: 10));
   });
 
   test('battery failures keep fixes flowing with last values', () async {

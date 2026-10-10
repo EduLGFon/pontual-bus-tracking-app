@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:pontual/core/config/env.dart';
 import 'package:pontual/core/geo/geo.dart';
 import 'package:pontual/core/logging/log.dart';
 import 'package:pontual/domain/trip/sampling_policy.dart';
@@ -20,9 +21,6 @@ const BBox fixArea = BBox(
   lngMin: -40.25,
   lngMax: -39.55,
 );
-
-/// Maximum accepted accuracy in meters.
-const double fixAccuracyMaxM = 60;
 
 /// Maximum fix age in milliseconds.
 const int fixMaxAgeMs = 20000;

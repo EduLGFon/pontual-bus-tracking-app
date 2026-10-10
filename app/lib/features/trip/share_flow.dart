@@ -22,6 +22,7 @@ import 'package:pontual/features/trip/permission_sheet.dart';
 import 'package:pontual/features/trip/share_progress_sheet.dart';
 import 'package:pontual/features/trip/share_progress_tracker.dart';
 import 'package:pontual/features/trip/trip_controller.dart';
+import 'package:pontual/platform/android/notification_permission.dart';
 import 'package:pontual/platform/android/permission_gateway.dart';
 
 /// Starts sharing a trip on [line]. Shows consent and permission UI,
@@ -141,6 +142,11 @@ Future<void> _shareTrip(
       return await ConsentSheet.show(context) == ConsentChoice.accepted;
     },
     showPermissions: () async {
+      if (!context.mounted) {
+        return;
+      }
+      // Best effort and non-blocking: the trip works without the banner.
+      await ensureNotificationPermission();
       if (!context.mounted) {
         return;
       }

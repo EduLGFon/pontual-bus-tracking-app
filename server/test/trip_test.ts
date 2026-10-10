@@ -350,13 +350,16 @@ Deno.test("injected engine reaches the ping path: easy-publish promotes", async 
         "content-type": "application/json",
         authorization: `Bearer ${token}`,
       },
+      // Stationary and coarse (350 m): easy-publish counts every fix
+      // as moving and relaxes the accuracy gate, so this still
+      // promotes on the first ping.
       body: JSON.stringify({
         seq: 1,
         lat: -18.72,
         lng: -39.85,
         spd: 0,
         hdg: null,
-        acc: 10,
+        acc: 350,
         bat: 80,
         chg: false,
         role: "W",
