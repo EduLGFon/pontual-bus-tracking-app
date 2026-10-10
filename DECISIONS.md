@@ -1006,3 +1006,27 @@ request history; the entries below supersede it where decided.
   consistent with client-side drops, but the cause needs browser
   console evidence (close codes + times) correlated with the API log.
   Next step is a console-logged repro from the phones.
+- 2026-10-10: Connection review (two-reader pass, every P0 verified
+  in code). Cause of the wifi drops found client-side, not in infra:
+  (1) `vehicleRepoProvider` is a plain Provider.family, and MapTab
+  never stops its repo, so every visited line leaks a socket plus 5 s
+  watchdog plus 15 s poller plus reconnect timer; the Horarios tab
+  keeps the Mapa stream alive, and even timetable-only lines opened
+  sockets. Leaked repos multiply snapshot GETs into the per-IP read
+  buckets and WS reconnects. (2) TripController.dispose never stopped
+  the location stream, leaking GPS after leaving mid-trip. (3) A stale
+  PingClient outcome could end the next trip (no generation guard).
+  (4) Heartbeats were parsed and discarded, so quiet lines resynced
+  pointlessly and the poller armed instantly instead of after 30 s.
+  Fixed in `6ca3892` (liveness, delayed polling, guarded resync) and
+  `e26d56f` (auto-dispose, dispose-stop, pilot-only streams, outcome
+  generation) plus tests; CI verifies (no Flutter on this host).
+  Server hardening in `f3734c8` (prune rate buckets), `589599e`
+  (heartbeat backpressure, 503 capacity instead of a stillborn 101),
+  `4e81e6d` (drop counters, CORS if-none-match), `2e19a1d` (guarded
+  snapshot builds); full suite 74 green here, prod restarted with the
+  tunnel URL kept. Deliberately deferred: per-IP read-limit raise
+  (fine at alpha scale; revisit for campus NAT), ping-bucket reorder
+  (paced clients have 7x headroom), WS close-tolerance (pinned by
+  AC06), remoteAddr IP source (edge overwrites the header in
+  practice).
