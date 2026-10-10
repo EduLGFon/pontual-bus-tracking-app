@@ -148,6 +148,12 @@ class TripController extends ChangeNotifier {
   SamplingMode _samplingMode = SamplingMode.waiting;
   bool _checking = false;
 
+  /// Earliest ms for the next ping send, paced to the last server
+  /// interval. Fixes arriving earlier are skipped; the next slot sends
+  /// the latest fix. Without this the client pings on every position
+  /// update, and fast web streams trip the server rate strikes (D29).
+  int _nextPingAtMs = 0;
+
   /// True after [cancelStart]. Checked between start steps so the
   /// progress sheet Cancelar button stops the flow promptly.
   bool _cancelled = false;
@@ -249,6 +255,7 @@ class TripController extends ChangeNotifier {
     _failReason = null;
     _lastErrorCode = null;
     _cancelled = false;
+    _nextPingAtMs = 0;
     _supervisor = TripSupervisor(gateway: _deps.gateway);
     _samplingMode = SamplingMode.waiting;
     _set(tripReduce(_state, TripEvent.tapStart));
@@ -432,12 +439,15 @@ class TripController extends ChangeNotifier {
     _startedAtMs = _deps.clock.nowMs();
     _supervisor?.begin(_startedAtMs!);
     _set(tripReduce(_state, TripEvent.startConfirmed));
-    _runLoop(token, stream);
+    final int firstIntervalS =
+        (started as Ok<TripInstruction>).value.intervalS;
+    _runLoop(token, stream, firstIntervalS);
     return true;
   }
 
-  void _runLoop(String token, Stream<TripFix> stream) {
+  void _runLoop(String token, Stream<TripFix> stream, int firstIntervalS) {
     _activeToken = token;
+    _nextPingAtMs = _deps.clock.nowMs() + firstIntervalS * 1000;
     _ping = PingClient(
       send: (Map<String, dynamic> fix) async {
         final Result<TripInstruction> res = await _deps.api.pingTrip(
@@ -473,7 +483,13 @@ class TripController extends ChangeNotifier {
       if (_webHidden) {
         return;
       }
+      // Paced to the server interval: faster streams (notably web
+      // watchPosition) would otherwise ping per fix and collect rate
+      // strikes. Skipped fixes are redundant by latest-wins anyway.
       _onFix(fix);
+      if (_deps.clock.nowMs() < _nextPingAtMs) {
+        return;
+      }
       _ping?.queue(_fixBody(fix), (PingOutcome o) => _onOutcome(token, o));
     });
     _autoEndTimer = Timer.periodic(const Duration(seconds: 10), (_) {
@@ -532,6 +548,7 @@ class TripController extends ChangeNotifier {
       end();
       return;
     }
+    _nextPingAtMs = _deps.clock.nowMs() + outcome.intervalS * 1000;
     final TripSupervisor? supervisor = _supervisor;
     if (supervisor == null) {
       return;

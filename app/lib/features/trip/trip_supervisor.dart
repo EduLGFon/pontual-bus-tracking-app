@@ -12,6 +12,12 @@ import 'package:pontual/features/trip/permission_sheet.dart';
 /// Consecutive failed sends before offline saver.
 const int offlineAfterFailures = 3;
 
+/// Consecutive non-granted permission polls before treating the
+/// permission as revoked. The web Permissions API can flap to "prompt"
+/// while positions flow (notably Firefox); one bad poll must not end
+/// a healthy trip. A real revoke persists and still ends it. See D29.
+const int permissionRevokedAfterPolls = 3;
+
 /// Milliseconds without a successful ping before offline saver.
 const int offlineAfterMs = 120 * 1000;
 
@@ -51,6 +57,7 @@ class TripSupervisor {
 
   int? _gpsOffSinceMs;
   bool _permissionRevoked = false;
+  int _permissionBadPolls = 0;
   int? _walkingPromptAtMs;
   int? _slowSinceMs;
   int? _lastSuccessMs;
@@ -73,7 +80,15 @@ class TripSupervisor {
   Future<void> pollEnvironment(int nowMs) async {
     try {
       final LocationPermissionState perm = await _gateway.check();
-      _permissionRevoked = perm != LocationPermissionState.granted;
+      if (perm == LocationPermissionState.granted) {
+        _permissionBadPolls = 0;
+        _permissionRevoked = false;
+      } else {
+        _permissionBadPolls += 1;
+        if (_permissionBadPolls >= permissionRevokedAfterPolls) {
+          _permissionRevoked = true;
+        }
+      }
     } catch (_) {
       // Keep the previous value.
     }
@@ -174,6 +189,7 @@ class TripSupervisor {
   void reset() {
     _gpsOffSinceMs = null;
     _permissionRevoked = false;
+    _permissionBadPolls = 0;
     _walkingPromptAtMs = null;
     _slowSinceMs = null;
     _lastSuccessMs = null;

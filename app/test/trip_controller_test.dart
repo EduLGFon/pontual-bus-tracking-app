@@ -310,6 +310,98 @@ void main() {
     c.dispose();
   });
 
+  test('pings are paced to the server interval', () async {
+    String? token;
+    final FakeClock clock = FakeClock(100000);
+    // ignore: close_sinks - closed at the end of the test.
+    final StreamController<Position> positions =
+        StreamController<Position>.broadcast();
+    int pings = 0;
+    final MockClient client = MockClient((http.Request req) async {
+      final String path = req.url.path;
+      if (path == '/v1/devices') {
+        return http.Response('{"token":"bm1_t","exp":1,"id":"d"}', 201);
+      }
+      if (path == '/v1/consents') {
+        return http.Response('{"ok":true}', 200);
+      }
+      if (path == '/v1/trip') {
+        if (req.method == 'DELETE') {
+          return http.Response('', 204);
+        }
+        return http.Response('{"r":"W","n":20}', 201);
+      }
+      if (path == '/v1/trip/ping') {
+        pings += 1;
+        return http.Response('{"r":"L","n":15}', 200);
+      }
+      return http.Response('{}', 404);
+    });
+    final TripController c = TripController(
+      TripDeps(
+        api: BusApi(
+          client: client,
+          baseUrl: () => 'http://127.0.0.1:8080',
+          readToken: () async => token,
+          writeToken: (String t) async => token = t,
+        ),
+        gateway: FakeGateway(),
+        consentStore: const ConsentStore(),
+        consentVersion: 1,
+        locations: () => LocationService(
+          positionStream: (_) => positions.stream,
+          batteryLevel: () async => 80,
+          charging: () async => false,
+          nowMs: () => clock.nowMs(),
+        ),
+        clock: clock,
+      ),
+    );
+    Future<void> flush() async {
+      for (int i = 0; i < 20; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    bool? started;
+    unawaited(
+      c
+          .startTrip(
+            lineId: 7,
+            lineLabel: '7',
+            showConsent: () async => true,
+            showPermissions: () async {},
+          )
+          .then((bool v) => started = v),
+    );
+    for (int i = 0; i < 100 && started == null; i++) {
+      positions.add(pos(-18.72, -39.85));
+      await Future<void>.microtask(() {});
+    }
+    expect(started, isTrue);
+    // Start (n:20) arms the next slot 20 s out: an immediate fix is
+    // tracked for health but sends nothing.
+    positions.add(pos(-18.72, -39.85));
+    await flush();
+    expect(pings, 0);
+    // At the slot the latest fix goes out exactly once.
+    clock.advance(20000);
+    positions.add(pos(-18.72, -39.85));
+    await flush();
+    expect(pings, 1);
+    // The ping answer (n:15) re-arms the slot; early fixes wait.
+    clock.advance(14000);
+    positions.add(pos(-18.72, -39.85));
+    await flush();
+    expect(pings, 1);
+    clock.advance(1000);
+    positions.add(pos(-18.72, -39.85));
+    await flush();
+    expect(pings, 2);
+    c.dispose();
+    await positions.close();
+  });
+
   testWidgets('end cards carry each reason', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(

@@ -86,10 +86,15 @@ void main() {
     await r.positions.close();
   });
 
-  test('permission revoked ends the trip immediately', () async {
+  test('permission revoked ends the trip after consecutive polls', () async {
     final Rig r = rig(happy());
     await start(r);
     r.gateway.permission = LocationPermissionState.denied;
+    // One or two flapping polls must not end a healthy trip (D29).
+    await r.controller.checkAutoEndForTest();
+    expect(r.controller.state, isA<TripActive>());
+    await r.controller.checkAutoEndForTest();
+    expect(r.controller.state, isA<TripActive>());
     await r.controller.checkAutoEndForTest();
     expect(r.controller.state, isA<TripIdle>());
     expect(r.controller.endKind, TripEndKind.permission);

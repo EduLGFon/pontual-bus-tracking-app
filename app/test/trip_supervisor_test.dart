@@ -169,20 +169,46 @@ void main() {
     expect(round.endReason, AutoEndReason.gpsOff);
   });
 
-  test('permission revoked ends immediately', () async {
+  test('permission revoked after 3 consecutive polls', () async {
+    final FakeGateway gateway = FakeGateway()
+      ..permission = LocationPermissionState.denied;
+    final TripSupervisor supervisor = TripSupervisor(gateway: gateway);
+    supervisor.begin(0);
+    Future<AutoEndReason?> round(int nowMs) async {
+      await supervisor.pollEnvironment(nowMs);
+      return supervisor
+          .evaluate(
+            role: 'L',
+            failures: 0,
+            wasOffline: false,
+            startedAtMs: 0,
+            nowMs: nowMs,
+          )
+          .endReason;
+    }
+
+    expect(await round(1000), isNull);
+    expect(await round(2000), isNull);
+    expect(await round(3000), AutoEndReason.permissionRevoked);
+  });
+
+  test('permission flap does not end the trip', () async {
     final FakeGateway gateway = FakeGateway()
       ..permission = LocationPermissionState.denied;
     final TripSupervisor supervisor = TripSupervisor(gateway: gateway);
     supervisor.begin(0);
     await supervisor.pollEnvironment(1000);
+    await supervisor.pollEnvironment(2000);
+    gateway.permission = LocationPermissionState.granted;
+    await supervisor.pollEnvironment(3000);
     final Supervision round = supervisor.evaluate(
       role: 'L',
       failures: 0,
       wasOffline: false,
       startedAtMs: 0,
-      nowMs: 1000,
+      nowMs: 3000,
     );
-    expect(round.endReason, AutoEndReason.permissionRevoked);
+    expect(round.endReason, isNull);
   });
 
   test('max duration ends the trip', () {
