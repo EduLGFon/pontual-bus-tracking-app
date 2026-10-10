@@ -755,7 +755,10 @@ class TripController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     // Full teardown: dispose must also stop the location stream and
-    // foreground service, not just the fix subscription.
+    // foreground service, not just the fix subscription. The direct
+    // cancel below stays: the linter only recognizes it in dispose.
+    _autoEndTimer?.cancel();
+    unawaited(_fixSub?.cancel());
     unawaited(_stopLocal());
     super.dispose();
   }
