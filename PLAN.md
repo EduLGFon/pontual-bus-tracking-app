@@ -760,8 +760,11 @@ trip of the device (erasing its fix), creates a trip with role `W`, returns
 1. **Trip lookup:** none for this device -> `gone`.
 2. **Sequence:** `seq <= trip.seq` -> duplicate or out of order: return the
    current instruction unchanged.
-3. **Rate limit:** `now - lastSeenAt < min_ping_interval_s` -> `strikes += 1`;
-   return the current instruction.
+3. **Rate limit:** `now - lastSeenAt < min_ping_interval_s` -> ignore the
+   fix (no strike), return the current instruction. Rationale: web
+   position streams run faster than the instructed interval, so
+   striking here ended legitimate trips in seconds (D29); spoofing
+   defense stays in steps 4-5 plus the per-device ping bucket.
 4. **Validate:** finite numbers; lat/lng inside bbox; `acc <= accuracy_max_m`;
    `0 <= spd <= speed_max_mps`; heading null or 0..359; battery 0..100. Invalid
    -> `strikes += 1`, ignore the fix, return the instruction.

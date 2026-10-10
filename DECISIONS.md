@@ -925,3 +925,66 @@ request history; the entries below supersede it where decided.
   GitHub Pages default as deploy-static.yml, so only the API_ORIGIN
   var is required. Added a 25 min timeout. Signing story unchanged
   (debug signing until the keystore secrets exist).
+- 2026-10-10: Prod API live on this VPS for the GitHub Pages build
+  (owner order: same Pages URL as the workflow default, option 2, no
+  bought domain). Adapted because this shell has no sudo (interactive
+  auth required), so Caddy on 80/443 plus system units plus firewall
+  were impossible: user systemd units `pontual-api` (Deno on
+  127.0.0.1:8080, APP_ENV=prod, 21-line bundle) and `pontual-tunnel`
+  (`cloudflared tunnel --url http://127.0.0.1:8080`), both enabled
+  with Linger=yes. Public API_ORIGIN is the quick-tunnel hostname
+  (shown at deploy time via the tunnel journal). DB needed no
+  migration (0001 already applied); the API runs as least-privilege
+  `pontual_app` with a fresh password in `~/pontual/prod.env` (0600)
+  over 127.0.0.1 loopback instead of the public-IP URL, and
+  ALLOWED_ORIGINS holds both Pages casings with TRUST_CLOUDFLARE=true.
+  Verified through the public URL: health/live/vehicles 200, CORS
+  preflight 204 with Pages ACAO, WS sub snapshot, full write cycle
+  (register 201, consent 200, start W, ping 200, end/delete 204, test
+  device removed, zero 5xx). Accepted limitations: the tunnel hostname
+  is random and changes on tunnel restart, so API_ORIGIN plus a Pages
+  rebuild must follow any restart; no edge cache or access rules on a
+  quick tunnel; Caddy plus hardening plus stable hostname still need a
+  root session plus a domain (see docs/runbooks/vps-hardening.md).
+- 2026-10-10: Repo renamed to `EduLGFon/pontual-bus-tracking`, so the
+  Pages URL is `https://edulgfon.github.io/pontual-bus-tracking` (the
+  deploy workflow derives it at runtime, no file change needed).
+  ALLOWED_ORIGINS corrected to the rename (both casings) and the local
+  git remote repointed. deploy-static failed at `Resolve origins`:
+  the `API_ORIGIN` repo variable is missing (likely set under Secrets
+  instead of Variables). Tunnel churn confirmed live: restarting the
+  API recycled the tunnel hostname, so `pontual-tunnel.service` no
+  longer BindsTo the API (API restarts keep the tunnel URL now).
+- 2026-10-10: Pages showed "Sem conexao" with `/v1/stream` 403s in the
+  API log. Root cause: ALLOWED_ORIGINS held the full project URLs
+  (`https://<owner>.github.io/<repo>`), but browsers send only scheme
+  plus host as Origin (`https://edulgfon.github.io`), so every socket
+  upgrade was rejected while plain GETs worked. Fixed to bare hosts
+  (both casings); bare-origin preflight 204 verified through the
+  tunnel. No firewall change was needed: the quick tunnel is
+  outbound-only, so neither the Oracle security list nor the host
+  firewall needs inbound rules for the API.
+- 2026-10-10: D29 - rate-limit strikes no longer end trips (PLAN 6.6
+  step 3 changed). Symptom: web trips died seconds after start with
+  server `abuse` (Chrome indoors) because `PingClient.queue` sends on
+  every accepted fix with no pacing to the instructed `n`, and
+  geolocator-web ignores the Android interval settings, so a walking
+  phone emits ~1 ping/s into `minPingIntervalS=4` rate strikes (5
+  strikes = dead, proven by a 9-pings-in-7s burst in the API log).
+  Android survived only because its stream honors the 20 s interval.
+  Fix: too-frequent pings are now ignored without a strike; the server
+  samples fast streams at ~4 s. Spoofing defense stays via
+  validate/teleport strikes (AC07 unchanged) plus the 30/min
+  per-device bucket. Tests: engine 25 (rapid valid pings survive) and
+  26 (spaced invalid pings still abuse-end); read_test AC08 burst now
+  asserts survival, which exposed a pre-existing hygiene bug (no
+  truncate in read_test, so db_test's `service_enabled=false` row
+  leaked 503s into it; fixed with a truncate). Verified: fmt, lint,
+  check clean; full suite 71 green on a throwaway DB; prod restarted
+  (tunnel URL kept) and 10 pings at 1 Hz through the public URL all
+  returned 200 with no end, the trip even published (`live:[[60,1]]`,
+  W to L). Remaining client work (needs the Flutter machine): pace
+  sends to `n` in TripController (RF08, also fixes the data budget at
+  1 Hz), and debounce the permission-revoked poll in TripSupervisor
+  (Firefox died by instant `permissionRevoked` from the Permissions
+  API reporting `prompt`; 3 consecutive polls before ending).

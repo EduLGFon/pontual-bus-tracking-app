@@ -136,12 +136,17 @@ export function applyPing(
   if (!trip) return { gone: true };
   // 2. Sequence: duplicates return the current instruction unchanged.
   if (fix.seq <= trip.seq) return currentInstruction(store, trip, cfg);
-  // 3. Rate limit.
+  // 3. Rate limit: ignore too-frequent pings without a strike and keep
+  // sampling the stream at ~minPingIntervalS. Striking here killed
+  // legitimate web clients whose position stream runs faster than the
+  // instructed interval (geolocator-web ignores Android interval
+  // settings). Spoofing defense stays via validate/teleport strikes
+  // below plus the per-device ping bucket. See DECISIONS.md.
   if (
     trip.lastSeenAtMs !== null &&
     nowMs - trip.lastSeenAtMs < cfg.minPingIntervalS * 1000
   ) {
-    return strike(store, events, trip, cfg);
+    return currentInstruction(store, trip, cfg);
   }
   // 4. Validate.
   if (validateFix(fix, cfg)) {

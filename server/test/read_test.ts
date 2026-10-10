@@ -37,6 +37,10 @@ function testDbUrl(): string {
   return url;
 }
 
+async function truncate(sql: ReturnType<typeof openDb>): Promise<void> {
+  await sql`truncate devices, app_config restart identity cascade`;
+}
+
 function app() {
   const sql = openDb(testDbUrl());
   const store = createStore();
@@ -145,6 +149,8 @@ Deno.test("AC08: snapshot IP flood is rate limited", async () => {
 
 Deno.test("AC08: device ping flood is contained", async () => {
   const { sql, hono } = app();
+  // Order-independent: earlier files may leave kill-switch rows behind.
+  await truncate(sql);
   try {
     const reg = await hono.request("/v1/devices", {
       method: "POST",
@@ -196,8 +202,9 @@ Deno.test("AC08: device ping flood is contained", async () => {
         }),
       });
     }
-    // Fresh sequence numbers in a burst trip strikes then abuse.
-    let last = "";
+    // Fresh sequence numbers in a burst are ignored without strikes
+    // (D29): a fast client stream must not end the trip. Ended trips
+    // answer 404 gone, so every 200 here proves survival.
     for (let i = 2; i <= 8; i++) {
       const r = await hono.request("/v1/trip/ping", {
         method: "POST",
@@ -217,13 +224,10 @@ Deno.test("AC08: device ping flood is contained", async () => {
           role: "W",
         }),
       });
-      last = JSON.stringify(await r.json());
+      assertEquals(r.status, 200);
+      const body = JSON.stringify(await r.json());
+      assert(!body.includes('"e"'), body);
     }
-    assert(
-      !last.includes('"n":15') || last.includes("abuse") ||
-        last.includes("gone"),
-      last,
-    );
   } finally {
     await sql.end();
   }

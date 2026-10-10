@@ -3,7 +3,13 @@
 import { assert, assertEquals } from "@std/assert";
 import { createStore, membersOf } from "../src/state/store.ts";
 import type { Store } from "../src/state/store.ts";
-import { applyPing, endTrip, isGone, startTrip } from "../src/domain/ping.ts";
+import {
+  applyPing,
+  endTrip,
+  isGone,
+  type PingOutcome,
+  startTrip,
+} from "../src/domain/ping.ts";
 import { tick } from "../src/domain/tick.ts";
 import { buildSnapshot } from "../src/domain/snapshot.ts";
 import {
@@ -617,4 +623,66 @@ Deno.test("24: snapshot leaks no ids", () => {
   const text = JSON.stringify(snap);
   assert(!text.includes("device"));
   assert(!text.includes("trip"));
+});
+
+// 25. Too-frequent pings are ignored without a strike (D29). A fast
+// client stream (e.g. web watchPosition at ~1 Hz) must not end the
+// trip; the server samples it at ~minPingIntervalS instead.
+Deno.test("25: rapid pings ignored, trip survives", () => {
+  const store = createStore();
+  const events: EngineEvent[] = [];
+  startTrip(store, events, "a", LINE, fix({ seq: 0 }), 0, cfg);
+  // 10 pings 1 s apart: all answered, none ends the trip.
+  for (let i = 1; i <= 10; i++) {
+    const r = applyPing(
+      store,
+      events,
+      "a",
+      null,
+      fix({ seq: i, lat: BUS.lat + i * 0.00001 }),
+      i * 1000,
+      cfg,
+      0,
+    );
+    assert(!isGone(r));
+    if (!isGone(r)) assertEquals(r.end, undefined);
+  }
+  assertEquals(store.trips.get("a")?.strikes ?? -1, 0);
+  // The trip still accepts a normally spaced ping afterwards.
+  const r = applyPing(
+    store,
+    events,
+    "a",
+    null,
+    fix({ seq: 11, lat: BUS.lat + 0.001 }),
+    15000,
+    cfg,
+    0,
+  );
+  assert(!isGone(r));
+});
+
+// 26. Invalid fixes still strike toward abuse when sampled (AC07 at
+// engine level): spaced-out bad pings end the trip.
+Deno.test("26: spaced invalid pings still end abuse", () => {
+  const store = createStore();
+  const events: EngineEvent[] = [];
+  startTrip(store, events, "a", LINE, fix({ seq: 0 }), 0, cfg);
+  let last: PingOutcome = { role: "W", intervalS: 20 };
+  // 5 s apart so each passes the rate gate and strikes on accuracy.
+  for (let i = 1; i <= 5; i++) {
+    last = applyPing(
+      store,
+      events,
+      "a",
+      null,
+      fix({ seq: i, accuracyM: 500 }),
+      i * 5000,
+      cfg,
+      0,
+    );
+    if (isGone(last)) break;
+  }
+  assert(!isGone(last));
+  if (!isGone(last)) assertEquals(last.end, "abuse");
 });
