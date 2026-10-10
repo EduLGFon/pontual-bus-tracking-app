@@ -10,6 +10,7 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:pontual/core/geo/geo.dart';
+import 'package:pontual/core/logging/log.dart';
 import 'package:pontual/domain/trip/sampling_policy.dart';
 
 /// Accepted area for fixes. Mirrors the server bbox.
@@ -93,17 +94,42 @@ class RawFix {
 }
 
 /// Drops mocked, stale, inaccurate, or out-of-area fixes.
-bool acceptFix(RawFix fix, int nowMs) {
+bool acceptFix(RawFix fix, int nowMs) => dropReason(fix, nowMs) == null;
+
+/// Why a raw reading is dropped, or null when it is accepted. Reason
+/// strings only, never coordinates. Used for debug logging so field
+/// tests can tell an empty sky from a bad filter.
+String? dropReason(RawFix fix, int nowMs) {
   if (fix.isMocked) {
-    return false;
+    return 'mocked';
   }
   if (nowMs - fix.timestampMs > fixMaxAgeMs) {
-    return false;
+    return 'stale';
   }
   if (fix.accuracyM > fixAccuracyMaxM || fix.accuracyM < 0) {
-    return false;
+    return 'accuracy';
   }
-  return fixArea.contains(fix.lat, fix.lng);
+  if (!fixArea.contains(fix.lat, fix.lng)) {
+    return 'outside';
+  }
+  return null;
+}
+
+/// Clamps negative speeds to zero. Some chipsets report a negative speed
+/// for an unknown fix, and the server rejects negatives.
+double normalizeSpeed(double speedMps) =>
+    speedMps < 0 ? 0 : (speedMps * 10).round() / 10;
+
+/// Folds a heading into the server range of 0 to 359 or null.
+/// Geolocator can report 360 for north and negatives for unknown.
+double? normalizeHeading(double heading) {
+  if (heading == 360) {
+    return 0;
+  }
+  if (heading >= 0 && heading < 360) {
+    return heading;
+  }
+  return null;
 }
 
 /// Rounds a coordinate to 5 decimals.
@@ -171,9 +197,15 @@ class LocationService {
     return LocationService(
       positionStream: (LocationSettings s) =>
           Geolocator.getPositionStream(locationSettings: s),
-      batteryLevel: () => battery.batteryLevel,
+      batteryLevel: () =>
+          battery.batteryLevel.timeout(const Duration(seconds: 3)),
       charging: () async {
-        final BatteryState state = await battery.onBatteryStateChanged.first;
+        // One-shot read. onBatteryStateChanged.first waits for the next
+        // change event instead and stalls every fix while the battery
+        // state does not change.
+        final BatteryState state = await battery.batteryState.timeout(
+          const Duration(seconds: 3),
+        );
         return state == BatteryState.charging;
       },
       nowMs: () => DateTime.now().millisecondsSinceEpoch,
@@ -190,6 +222,8 @@ class LocationService {
   int _lastChangeMs = 0;
   SamplingMode _mode = SamplingMode.waiting;
   String _lineLabel = '';
+  int _lastBatteryPct = 100;
+  bool _lastCharging = false;
 
   /// Starts emitting accepted fixes for [mode]. Recreates the stream when
   /// the policy switches modes, at most once per 30 seconds.
@@ -214,39 +248,63 @@ class LocationService {
 
   void _listen(SamplingMode m, StreamController<TripFix> controller) {
     unawaited(_sub?.cancel());
-    _sub = _positionStream(settingsFor(m, _lineLabel)).listen((Position p) {
-      void handle() async {
-        final RawFix raw = RawFix(
-          lat: p.latitude,
-          lng: p.longitude,
-          accuracyM: p.accuracy,
-          isMocked: p.isMocked,
-          timestampMs: p.timestamp.millisecondsSinceEpoch,
-        );
-        if (!acceptFix(raw, _nowMs())) {
-          return;
+    _sub = _positionStream(settingsFor(m, _lineLabel)).listen(
+      (Position p) {
+        void handle() async {
+          try {
+            final RawFix raw = RawFix(
+              lat: p.latitude,
+              lng: p.longitude,
+              accuracyM: p.accuracy,
+              isMocked: p.isMocked,
+              timestampMs: p.timestamp.millisecondsSinceEpoch,
+            );
+            final String? reason = dropReason(raw, _nowMs());
+            if (reason != null) {
+              Log.d('fix dropped', reason);
+              return;
+            }
+            _seq += 1;
+            int level = _lastBatteryPct;
+            bool chg = _lastCharging;
+            try {
+              // Parallel and bounded: a stuck battery read must never
+              // starve location. Failures keep the last known values.
+              final List<Object> parts = await Future.wait<Object>(
+                <Future<Object>>[_batteryLevel(), _charging()],
+              );
+              level = (parts[0] as int).clamp(0, 100);
+              chg = parts[1] as bool;
+              _lastBatteryPct = level;
+              _lastCharging = chg;
+            } catch (_) {
+              Log.w('battery read failed', 'last kept');
+            }
+            if (!controller.isClosed) {
+              controller.add(
+                TripFix(
+                  seq: _seq,
+                  lat: round5(raw.lat),
+                  lng: round5(raw.lng),
+                  speedMps: normalizeSpeed(p.speed),
+                  heading: normalizeHeading(p.heading),
+                  accuracyM: raw.accuracyM,
+                  batteryPct: batteryBucket(level),
+                  charging: chg,
+                ),
+              );
+            }
+          } catch (_) {
+            Log.w('fix handling failed', '');
+          }
         }
-        _seq += 1;
-        final int level = await _batteryLevel();
-        final bool chg = await _charging();
-        if (!controller.isClosed) {
-          controller.add(
-            TripFix(
-              seq: _seq,
-              lat: round5(raw.lat),
-              lng: round5(raw.lng),
-              speedMps: (p.speed * 10).round() / 10,
-              heading: p.heading >= 0 ? p.heading : null,
-              accuracyM: raw.accuracyM,
-              batteryPct: batteryBucket(level.clamp(0, 100)),
-              charging: chg,
-            ),
-          );
-        }
-      }
 
-      handle();
-    });
+        handle();
+      },
+      onError: (Object e) {
+        Log.w('position stream error', e.runtimeType.toString());
+      },
+    );
   }
 
   /// Requests a mode switch honoring hysteresis. Recreates the underlying
